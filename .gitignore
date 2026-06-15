@@ -35,4 +35,8 @@ backend/uploads/
 
 # Celery
 celerybeat-schedule
+celerybeat-schedule.*
 celerybeat.pid
+
+# Redis
+dump.rdb
