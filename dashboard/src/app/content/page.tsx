@@ -155,6 +155,12 @@ function CopyBtn({ text }: { text: string }) {
 }
 
 /* ── Main Page ───────────────────────────────────────────── */
+const BRANDS = [
+  { value: 'hcllp',         label: 'Harshwal & Co.',  short: 'HCLLP' },
+  { value: 'blue_arrow_cpa', label: 'Blue Arrow CPA', short: 'BA CPA' },
+  { value: 'advisory',      label: 'Advisory',         short: 'Advisory' },
+];
+
 export default function ContentPage() {
   const [activeChat, setActiveChat] = useState<string>('new');
   const [chats, setChats] = useState<Chat[]>([]);
@@ -164,9 +170,20 @@ export default function ContentPage() {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileSidebar, setMobileSidebar] = useState(false);
   const [kbStats, setKbStats] = useState({ documents: 0, last_updated: 'Just now', model: 'gpt-4o-mini' });
+  const [brand, setBrand] = useState('hcllp');
+  const [brandOpen, setBrandOpen] = useState(false);
+  const brandRef = useRef<HTMLDivElement>(null);
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (brandRef.current && !brandRef.current.contains(e.target as Node)) setBrandOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
 
   useEffect(() => {
     fetch('http://localhost:8000/api/chat/sessions')
@@ -225,7 +242,7 @@ export default function ContentPage() {
       const res = await fetch('http://localhost:8000/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: msg, session_id: activeChat === 'new' ? null : activeChat }),
+        body: JSON.stringify({ message: msg, session_id: activeChat === 'new' ? null : activeChat, brand }),
       });
       if (!res.ok) throw new Error();
       const data = await res.json();
@@ -537,19 +554,53 @@ export default function ContentPage() {
 
             <h1 style={{ fontSize: 16, fontWeight: 600, color: '#1a1a1a', margin: 0, paddingLeft: 6, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>Knowledge Base Chat</h1>
 
-            {/* Model pill */}
-            <div style={{
-              display:'flex', alignItems:'center', gap:6,
-              padding:'5px 12px', borderRadius:99, border:'1px solid #e5e2de',
-              background:'#faf9f7', cursor:'pointer',
-              fontSize:13, fontWeight:500, color:'#3a3a3a',
-              whiteSpace: 'nowrap', flexShrink: 0
-            }}>
-              <div style={{ width:7, height:7, borderRadius:'50%', background:'#cc785c', boxShadow:'0 0 5px rgba(204,120,92,0.5)' }} />
-              Trenoxa RAG
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="6 9 12 15 18 9"/>
-              </svg>
+            {/* Brand picker */}
+            <div ref={brandRef} style={{ position: 'relative', flexShrink: 0 }}>
+              <button
+                onClick={() => setBrandOpen(o => !o)}
+                style={{
+                  display:'flex', alignItems:'center', gap:6,
+                  padding:'5px 12px', borderRadius:99, border:'1px solid #e5e2de',
+                  background: brandOpen ? '#f0ede9' : '#faf9f7', cursor:'pointer',
+                  fontSize:13, fontWeight:500, color:'#3a3a3a',
+                  whiteSpace: 'nowrap', fontFamily:'var(--font-sans)',
+                  transition:'background 150ms',
+                }}
+              >
+                <div style={{ width:7, height:7, borderRadius:'50%', background:'#cc785c', boxShadow:'0 0 5px rgba(204,120,92,0.5)', flexShrink:0 }} />
+                {BRANDS.find(b => b.value === brand)?.label ?? 'Select Brand'}
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ transition:'transform 150ms', transform: brandOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>
+                  <polyline points="6 9 12 15 18 9"/>
+                </svg>
+              </button>
+              {brandOpen && (
+                <div style={{
+                  position:'absolute', top:'calc(100% + 6px)', left:0,
+                  background:'#fff', border:'1px solid #e5e2de',
+                  borderRadius:12, padding:4,
+                  boxShadow:'0 8px 24px rgba(0,0,0,0.10)',
+                  minWidth:170, zIndex:100,
+                }}>
+                  {BRANDS.map(b => (
+                    <button
+                      key={b.value}
+                      onClick={() => { setBrand(b.value); setBrandOpen(false); }}
+                      style={{
+                        width:'100%', display:'flex', alignItems:'center', gap:8,
+                        padding:'8px 12px', background: brand === b.value ? '#f5ede8' : 'none',
+                        border:'none', borderRadius:8, cursor:'pointer',
+                        fontSize:13, fontWeight: brand === b.value ? 600 : 400,
+                        color: brand === b.value ? '#cc785c' : '#3a3a3a',
+                        fontFamily:'var(--font-sans)', textAlign:'left',
+                        transition:'background 120ms',
+                      }}
+                    >
+                      <div style={{ width:6, height:6, borderRadius:'50%', background: brand === b.value ? '#cc785c' : '#ccc', flexShrink:0 }} />
+                      {b.label}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div style={{ marginLeft:'auto', display:'flex', gap:8, alignItems:'center', flexShrink: 0 }}>

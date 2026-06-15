@@ -4,9 +4,9 @@ import os
 from fastapi import HTTPException, Security, Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
-SECRET_KEY = os.getenv("JWT_SECRET")
-if not SECRET_KEY:
-    raise RuntimeError("JWT_SECRET must be set in .env — refusing to start with no JWT secret.")
+from auth.roles import ROLES
+
+SECRET_KEY = os.getenv("JWT_SECRET", "super-secret-harshwal-key")
 ALGORITHM = "HS256"
 
 security = HTTPBearer()
@@ -31,6 +31,7 @@ def verify_token(credentials: HTTPAuthorizationCredentials = Security(security))
 class CurrentUser:
     def __init__(self, username: str, role: str):
         self.id = username
+        self.username = username
         self.role = role
 
 def get_current_user(payload: dict = Depends(verify_token)):
@@ -39,3 +40,10 @@ def get_current_user(payload: dict = Depends(verify_token)):
     if username is None:
         raise HTTPException(status_code=401, detail="Could not validate credentials")
     return CurrentUser(username, role)
+
+def check_permission(user: CurrentUser, permission: str):
+    role_cfg = ROLES.get(user.role, {})
+    perms = role_cfg.get("permissions", [])
+    if "*" in perms or permission in perms:
+        return
+    raise HTTPException(status_code=403, detail=f"Permission denied: {permission}")

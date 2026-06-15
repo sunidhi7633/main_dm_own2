@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 
 type AgentStatus = { is_running: boolean; last_run: string; logs: string[] };
 
@@ -15,6 +15,7 @@ export default function Home() {
   const [time, setTime] = useState(new Date());
   const [dashboardStats, setDashboardStats] = useState<any>(null);
   const [smoQueue, setSmoQueue] = useState<any[]>([]);
+  const [runError, setRunError] = useState<string | null>(null);
 
   const fetchStatus = async () => {
     try {
@@ -35,10 +36,16 @@ export default function Home() {
   };
 
   const runPipeline = async () => {
+    setRunError(null);
     try {
-      await fetch('http://localhost:8000/api/agents/run', { method: 'POST' });
-      fetchStatus();
-    } catch { /* backend offline */ }
+      const res = await fetch('http://localhost:8000/api/agents/run', { method: 'POST' });
+      if (!res.ok) { setRunError(`Server error: ${res.status}`); return; }
+      const data = await res.json();
+      if (data.status === "already_running") { setRunError("Pipeline is already running."); return; }
+      setTimeout(fetchStatus, 500);
+    } catch {
+      setRunError("Could not reach backend. Is it running?");
+    }
   };
 
   useEffect(() => {
@@ -226,23 +233,26 @@ export default function Home() {
                     Last run: {status.last_run} · Scheduled every Monday 3:00 AM
                   </p>
                 </div>
-                <button
-                  onClick={runPipeline}
-                  disabled={status.is_running}
-                  style={{
-                    padding: "8px 18px",
-                    backgroundColor: status.is_running ? "rgba(255,255,255,0.05)" : "var(--primary)",
-                    color: status.is_running ? "var(--on-dark-soft)" : "white",
-                    border: "none",
-                    borderRadius: "8px",
-                    fontSize: "13px",
-                    fontWeight: 500,
-                    cursor: status.is_running ? "not-allowed" : "pointer",
-                    fontFamily: "var(--font-sans)",
-                    transition: "background-color 150ms",
-                    whiteSpace: "nowrap",
-                  }}
-                >{status.is_running ? "⠋ Running" : "▶ Run Now"}</button>
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
+                  <button
+                    onClick={runPipeline}
+                    disabled={status.is_running}
+                    style={{
+                      padding: "8px 18px",
+                      backgroundColor: status.is_running ? "rgba(255,255,255,0.05)" : "var(--primary)",
+                      color: status.is_running ? "var(--on-dark-soft)" : "white",
+                      border: "none",
+                      borderRadius: "8px",
+                      fontSize: "13px",
+                      fontWeight: 500,
+                      cursor: status.is_running ? "not-allowed" : "pointer",
+                      fontFamily: "var(--font-sans)",
+                      transition: "background-color 150ms",
+                      whiteSpace: "nowrap",
+                    }}
+                  >{status.is_running ? "⠋ Running" : "▶ Run Now"}</button>
+                  {runError && <span style={{ fontSize: "11px", color: "#f87171", maxWidth: 200, textAlign: "right" }}>{runError}</span>}
+                </div>
               </div>
 
               {/* Terminal */}

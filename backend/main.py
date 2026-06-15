@@ -46,9 +46,12 @@ async def lifespan(app: FastAPI):
         with engine.connect() as conn:
             conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector;"))
             conn.commit()
+    except Exception as e:
+        print(f"Warning: pgvector extension not available (non-fatal): {e}")
+    try:
         Base.metadata.create_all(bind=engine)
     except Exception as e:
-        print(f"Warning: Could not connect to database to create tables: {e}")
+        print(f"Warning: Could not create database tables: {e}")
         
     # Verify MongoDB Connection
     from mongo import client as mongo_client
@@ -75,6 +78,31 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         print(f"Warning: Could not seed report_recipients: {e}")
 
+    # Seed sample competitors for Competitor Intelligence
+    try:
+        from database import SessionLocal as _SL
+        _db = _SL()
+        if _db.query(models.CICompetitor).count() == 0:
+            _SAMPLE_COMPETITORS = [
+                {"name": "Deloitte", "industry": "Big 4 Accounting", "website": "deloitte.com", "linkedin_handle": "deloitte", "twitter_handle": "Deloitte", "facebook_handle": "deloitte", "instagram_handle": "deloitte"},
+                {"name": "PwC", "industry": "Big 4 Accounting", "website": "pwc.com", "linkedin_handle": "pwc", "twitter_handle": "PwC", "facebook_handle": "pwc", "instagram_handle": "pwc"},
+                {"name": "KPMG", "industry": "Big 4 Accounting", "website": "kpmg.com", "linkedin_handle": "kpmg", "twitter_handle": "KPMG", "facebook_handle": "kpmg", "instagram_handle": "kpmg"},
+                {"name": "EY", "industry": "Big 4 Accounting", "website": "ey.com", "linkedin_handle": "ernst-and-young", "twitter_handle": "EYnews", "facebook_handle": "EY", "instagram_handle": "ernstandyoung"},
+                {"name": "Grant Thornton", "industry": "Mid-market CPA", "website": "grantthornton.com", "linkedin_handle": "grant-thornton", "twitter_handle": "GrantThorntonUS", "facebook_handle": "GrantThorntonUS", "instagram_handle": "grantthorntonus"},
+                {"name": "BDO USA", "industry": "Mid-market CPA", "website": "bdo.com", "linkedin_handle": "bdo-usa", "twitter_handle": "BDO_USA_CPA", "facebook_handle": "BDOUSA", "instagram_handle": "bdousa"},
+                {"name": "RSM US", "industry": "Mid-market CPA", "website": "rsmus.com", "linkedin_handle": "rsm-us", "twitter_handle": "RSM_US", "facebook_handle": "RSMUS", "instagram_handle": "rsm_us"},
+                {"name": "CohnReznick", "industry": "CPA / Advisory", "website": "cohnreznick.com", "linkedin_handle": "cohnreznick", "twitter_handle": "CohnReznick", "facebook_handle": "CohnReznick", "instagram_handle": "cohnreznick"},
+                {"name": "Plante Moran", "industry": "CPA / Advisory", "website": "plantemoran.com", "linkedin_handle": "plante-moran", "twitter_handle": "PlanteAndMoran", "facebook_handle": "PlanteAndMoran", "instagram_handle": "plantemoran"},
+                {"name": "Moss Adams", "industry": "CPA / Advisory", "website": "mossadams.com", "linkedin_handle": "moss-adams", "twitter_handle": "MossAdams", "facebook_handle": "MossAdams", "instagram_handle": "mossadamsllp"},
+            ]
+            for c in _SAMPLE_COMPETITORS:
+                _db.add(models.CICompetitor(**c))
+            _db.commit()
+            print(f"Seeded {len(_SAMPLE_COMPETITORS)} sample competitors.")
+        _db.close()
+    except Exception as e:
+        print(f"Warning: Could not seed competitors: {e}")
+
     # Create MongoDB indexes for query performance
     try:
         from mongo import db as mongo_db
@@ -100,11 +128,13 @@ from api.review_routes import router as review_router
 from api.library_routes import router as library_router
 from api.report_routes import router as report_router
 from api.settings_routes import router as settings_router
+from api.competitor_intel_routes import router as ci_router
 
 app.include_router(review_router)
 app.include_router(library_router)
 app.include_router(report_router)
 app.include_router(settings_router)
+app.include_router(ci_router)
 
 # CORS configuration
 app.add_middleware(
@@ -118,6 +148,7 @@ app.add_middleware(
 class ChatRequest(BaseModel):
     message: str
     session_id: Optional[str] = None
+    brand: Optional[str] = None
 
 class ChatResponse(BaseModel):
     reply: str
@@ -268,17 +299,58 @@ async def chat_with_knowledge_base(req: ChatRequest, db: Session = Depends(get_d
     # Retrieve relevant document chunks to surface as sources and enrich context
     sources = _keyword_search_chunks(req.message, db)
 
-    sys_msg = (
-        "You are the Harshwal Knowledge Assistant — an expert AI for Harshwal Group, "
-        "which operates three brands:\n"
-        "1. Harshwal & Company LLP (HCLLP) — full-service CPA firm: tax, audit, advisory for SMBs and individuals.\n"
-        "2. Blue Arrow CPA — specialist CPA firm for tribal governments and Native American entities; "
-        "expert in SEFA, 2 CFR Part 200, and tribal sovereignty compliance.\n"
-        "3. Harshwal Advisory — strategic consulting for growth-stage companies: M&A, financial planning, operations.\n\n"
-        "Answer questions precisely and professionally. "
-        "Cite specific regulations (e.g. 2 CFR Part 200, IRC Section numbers) when relevant. "
-        "If a question is outside the firm's scope, say so clearly."
-    )
+    BRAND_PROMPTS = {
+        "hcllp": (
+            "You are the content and knowledge assistant for Harshwal & Company LLP (HCLLP), "
+            "a full-service CPA firm serving small and mid-size businesses, high-net-worth individuals, "
+            "and S-Corp / LLC owners across the United States.\n\n"
+            "HCLLP services: federal & state tax preparation and planning, bookkeeping, payroll, "
+            "audit support, IRS representation, business entity structuring, estate planning, and "
+            "QuickBooks advisory.\n\n"
+            "Tone: professional, approachable, practical. Use plain English. "
+            "Cite relevant IRC sections, IRS publications, or GAAP standards when helpful. "
+            "Always frame answers around the needs of SMB owners and individuals. "
+            "Never discuss Blue Arrow CPA tribal work or Harshwal Advisory M&A topics — "
+            "those are separate brands."
+        ),
+        "blue_arrow_cpa": (
+            "You are the content and knowledge assistant for Blue Arrow CPA, "
+            "a specialist CPA firm exclusively serving tribal governments, Native American enterprises, "
+            "and federally recognised tribal entities.\n\n"
+            "Blue Arrow CPA services: Single Audit (2 CFR Part 200 / Uniform Guidance), SEFA preparation, "
+            "federal grant compliance, Indian Gaming Regulatory Act (IGRA) compliance, tribal governmental "
+            "accounting under GASB standards, sovereignty-aware financial governance, and OMB audit readiness.\n\n"
+            "Tone: authoritative, compliance-focused, respectful of tribal sovereignty. "
+            "Cite 2 CFR Part 200, GASB pronouncements, IGRA, and BIA regulations precisely. "
+            "Never conflate tribal government accounting with commercial CPA work. "
+            "Never discuss HCLLP SMB tax services or Harshwal Advisory topics."
+        ),
+        "advisory": (
+            "You are the content and knowledge assistant for Harshwal Advisory, "
+            "a strategic consulting practice focused on growth-stage companies, venture-backed startups, "
+            "and founder-led businesses preparing for institutional investment or M&A transactions.\n\n"
+            "Harshwal Advisory services: Series A/B/C audit readiness, due diligence preparation, "
+            "revenue recognition under ASC 606, equity compensation (ASC 718), cap table clean-up, "
+            "409A valuations, SAFE/convertible note structuring, financial model review, CFO-advisory, "
+            "and sell-side / buy-side M&A support.\n\n"
+            "Tone: strategic, investor-aware, sophisticated. Speak the language of VCs and founders. "
+            "Reference ASC standards, SEC guidance, and PCAOB standards where relevant. "
+            "Never discuss HCLLP SMB tax work or Blue Arrow CPA tribal compliance."
+        ),
+    }
+
+    brand = req.brand if req.brand in BRAND_PROMPTS else None
+    if brand:
+        sys_msg = BRAND_PROMPTS[brand]
+    else:
+        sys_msg = (
+            "You are the Harshwal Knowledge Assistant — an expert AI for Harshwal Group, "
+            "which operates three brands: Harshwal & Company LLP (HCLLP) for SMB tax and CPA services, "
+            "Blue Arrow CPA for tribal government accounting and federal grant compliance, and "
+            "Harshwal Advisory for growth-stage company strategy and M&A readiness.\n\n"
+            "Answer questions precisely and professionally. "
+            "Cite specific regulations (e.g. 2 CFR Part 200, IRC Section numbers) when relevant."
+        )
     if sources:
         sys_msg += (
             f"\n\nThe following knowledge base documents are relevant to this query: {', '.join(sources)}. "
@@ -499,12 +571,10 @@ def get_dashboard_stats(db: Session = Depends(get_db)):
         return {"error": str(e)}
 
 @app.post("/api/agents/run")
-def run_agents(background_tasks: BackgroundTasks):
+async def run_agents(background_tasks: BackgroundTasks):
     import agents.pipeline
     if agents.pipeline.is_pipeline_running:
         return {"status": "already_running"}
-    
-    # Run the real AGY SDK pipeline in background
-    import asyncio
-    background_tasks.add_task(lambda: asyncio.run(run_intelligence_pipeline()))
+    # Pass the coroutine function directly — FastAPI BackgroundTasks handles async
+    background_tasks.add_task(run_intelligence_pipeline)
     return {"status": "started"}
