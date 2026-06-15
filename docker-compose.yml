@@ -1,0 +1,102 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: harshwal_pgvector
+    environment:
+      POSTGRES_USER: harshwal_user
+      POSTGRES_PASSWORD: harshwal_password
+      POSTGRES_DB: harshwal_automation
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - harshwal_network
+
+  mongodb:
+    image: mongo:latest
+    container_name: harshwal_mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    restart: unless-stopped
+    networks:
+      - harshwal_network
+
+  redis:
+    image: redis:alpine
+    container_name: harshwal_redis
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+    networks:
+      - harshwal_network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: harshwal_backend
+    environment:
+      - DATABASE_URL=postgresql+psycopg2://harshwal_user:harshwal_password@postgres:5432/harshwal_automation
+      - JWT_SECRET=${JWT_SECRET:-super-secret-harshwal-key}
+      - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-harshwal2026}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - MONGODB_URI=mongodb://mongodb:27017
+      - REDIS_URL=redis://redis:6379/0
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+      - mongodb
+      - redis
+    restart: unless-stopped
+    networks:
+      - harshwal_network
+
+  celery_worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: harshwal_celery_worker
+    command: celery -A celery_config.app worker --beat -l info
+    environment:
+      - DATABASE_URL=postgresql+psycopg2://harshwal_user:harshwal_password@postgres:5432/harshwal_automation
+      - JWT_SECRET=${JWT_SECRET:-super-secret-harshwal-key}
+      - MONGODB_URI=mongodb://mongodb:27017
+      - REDIS_URL=redis://redis:6379/0
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+    depends_on:
+      - backend
+      - mongodb
+      - redis
+    restart: unless-stopped
+    networks:
+      - harshwal_network
+
+  dashboard:
+    build:
+      context: ./dashboard
+      dockerfile: Dockerfile
+    container_name: harshwal_dashboard
+    ports:
+      - "3000:3000"
+    # We must ensure Next.js uses the docker network hostname for backend calls when doing SSR
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+    depends_on:
+      - backend
+    restart: unless-stopped
+    networks:
+      - harshwal_network
+
+volumes:
+  postgres_data:
+  mongodb_data:
+
+networks:
+  harshwal_network:
+    driver: bridge
