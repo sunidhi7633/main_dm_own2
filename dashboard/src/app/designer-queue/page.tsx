@@ -113,8 +113,16 @@ export default function DesignerQueue() {
 
   return (
     <div className="page-container" style={{ maxWidth: 800 }}>
+      <style>{`
+        @media (max-width: 768px) {
+          .dq-card { padding: 20px !important; }
+          .dq-header { font-size: 28px !important; }
+          .dq-url-row { flex-direction: column !important; }
+          .dq-url-row input { min-width: 0 !important; }
+        }
+      `}</style>
       <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: "8px" }}>
-        <h1 className="font-serif" style={{ fontSize: "36px", fontWeight: 500, color: "var(--ink)", letterSpacing: "-0.5px" }}>
+        <h1 className="dq-header font-serif" style={{ fontSize: "36px", fontWeight: 500, color: "var(--ink)", letterSpacing: "-0.5px" }}>
           Designer Queue
         </h1>
         {items.length > 0 && (
@@ -135,7 +143,7 @@ export default function DesignerQueue() {
 
       <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
         {items.map(item => (
-          <div key={item._id} style={{
+          <div key={item._id} className="dq-card" style={{
             background: "#ffffff",
             border: "1px solid var(--hairline)",
             borderRadius: "16px",
@@ -195,7 +203,7 @@ export default function DesignerQueue() {
                 <label style={{ display: "block", fontSize: "13px", fontWeight: 600, marginBottom: "8px", color: "var(--ink)" }}>
                   Asset URL (S3, CDN, or direct link)
                 </label>
-                <div style={{ display: "flex", gap: "10px" }}>
+                <div className="dq-url-row" style={{ display: "flex", gap: "10px" }}>
                   <input
                     type="text"
                     className="input-field"

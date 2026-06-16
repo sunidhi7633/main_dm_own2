@@ -162,7 +162,16 @@ export default function DMLibrary() {
 
   return (
     <div className="page-container" style={{ maxWidth: 1200 }}>
-      <h1 className="font-serif" style={{ fontSize: "36px", fontWeight: 500, marginBottom: "8px", color: "var(--ink)", letterSpacing: "-0.5px" }}>
+      <style>{`
+        @media (max-width: 768px) {
+          .lib-upload-controls { flex-direction: column !important; }
+          .lib-upload-controls select, .lib-upload-controls input { min-width: 0 !important; width: 100% !important; }
+          .lib-filters { flex-direction: column !important; gap: 10px !important; }
+          .lib-filters select { width: 100% !important; }
+          .lib-asset-title { font-size: 28px !important; }
+        }
+      `}</style>
+      <h1 className="lib-asset-title font-serif" style={{ fontSize: "36px", fontWeight: 500, marginBottom: "8px", color: "var(--ink)", letterSpacing: "-0.5px" }}>
         DM Asset Library
       </h1>
       <p style={{ color: "var(--muted)", marginBottom: "32px", fontSize: "15px" }}>
@@ -229,7 +238,7 @@ export default function DMLibrary() {
         </div>
 
         {/* Upload options row */}
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "16px", alignItems: "flex-end" }}>
+        <div className="lib-upload-controls" style={{ display: "flex", flexWrap: "wrap", gap: "16px", alignItems: "flex-end" }}>
           <div>
             <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: "var(--muted)", marginBottom: "6px", textTransform: "uppercase", letterSpacing: "0.5px" }}>Brand</label>
             <select className="input-field" value={uploadBrand} onChange={e => setUploadBrand(e.target.value)} style={{ height: "38px", minWidth: "160px" }}>
