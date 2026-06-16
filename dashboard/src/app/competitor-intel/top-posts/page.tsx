@@ -58,16 +58,26 @@ export default function TopPostsPage() {
   const filtered = platformFilter === "all" ? posts : posts.filter(p => p.platform === platformFilter);
 
   return (
-    <div style={{ padding: "32px 40px", maxWidth: 1200, margin: "0 auto" }}>
+    <div className="tp-container" style={{ padding: "32px 40px", maxWidth: 1200, margin: "0 auto" }}>
+      <style>{`
+        @media (max-width: 768px) {
+          .tp-container { padding: 20px 16px !important; }
+          .tp-header-row { flex-direction: column !important; align-items: flex-start !important; gap: 12px !important; }
+          .tp-review-btn { width: 100% !important; text-align: center !important; box-sizing: border-box; }
+          .tp-trend-grid { grid-template-columns: 1fr 1fr !important; }
+          .tp-platform-filter { flex-wrap: wrap !important; }
+          .tp-post-header { flex-wrap: wrap !important; gap: 6px !important; }
+        }
+      `}</style>
       <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
         <a href="/competitor-intel" style={{ fontSize: 13, color: "var(--muted)", textDecoration: "none" }}>← Competitor Intel</a>
       </div>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 28 }}>
+      <div className="tp-header-row" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 28 }}>
         <div>
           <h1 style={{ fontSize: 24, fontWeight: 700, color: "var(--ink)", margin: 0 }}>Top 30 Posts</h1>
           <p style={{ fontSize: 13, color: "var(--muted)", margin: "4px 0 0" }}>Highest-performing competitor content from the latest pipeline run</p>
         </div>
-        <a href="/competitor-intel/generated" style={{ padding: "9px 20px", borderRadius: 8, border: "none", background: "var(--primary)", color: "#fff", fontSize: 13, fontWeight: 600, textDecoration: "none" }}>
+        <a href="/competitor-intel/generated" className="tp-review-btn" style={{ padding: "9px 20px", borderRadius: 8, border: "none", background: "var(--primary)", color: "#fff", fontSize: 13, fontWeight: 600, textDecoration: "none" }}>
           Review Generated Content →
         </a>
       </div>
@@ -77,7 +87,7 @@ export default function TopPostsPage() {
         <div style={{ background: "#fff", borderRadius: 14, border: "1px solid var(--hairline)", padding: 24, marginBottom: 24 }}>
           <div style={{ fontSize: 15, fontWeight: 700, color: "var(--ink)", marginBottom: 12 }}>AI Trend Analysis</div>
           <p style={{ fontSize: 13, color: "var(--muted)", lineHeight: 1.7, marginBottom: 20 }}>{trend.summary}</p>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 16 }}>
+          <div className="tp-trend-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 16 }}>
             {[
               { label: "Content Themes", items: trend.themes, color: "#dbeafe", tc: "#1d4ed8" },
               { label: "Writing Styles", items: trend.writing_styles, color: "#dcfce7", tc: "#15803d" },
@@ -100,7 +110,7 @@ export default function TopPostsPage() {
       )}
 
       {/* Platform filter */}
-      <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+      <div className="tp-platform-filter" style={{ display: "flex", gap: 8, marginBottom: 20 }}>
         {platforms.map(p => (
           <button key={p} onClick={() => setPlatformFilter(p)} style={{
             padding: "6px 16px", borderRadius: 20, border: "1px solid var(--hairline)",

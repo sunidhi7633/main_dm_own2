@@ -49,7 +49,13 @@ export default function LoginPage() {
       padding: "24px",
       backgroundImage: "radial-gradient(ellipse 80% 60% at 50% 0%, #efe9de 0%, transparent 60%)",
     }}>
-      <div style={{
+      <style>{`
+        @media (max-width: 768px) {
+          .login-card { padding: 32px 20px 24px !important; }
+          .login-heading { font-size: 26px !important; }
+        }
+      `}</style>
+      <div className="login-card" style={{
         width: "100%",
         maxWidth: "420px",
         backgroundColor: "var(--canvas)",
@@ -65,7 +71,7 @@ export default function LoginPage() {
             alt="Harshwal Logo"
             style={{ height: "32px", objectFit: "contain", marginBottom: "20px" }}
           />
-          <h1 style={{
+          <h1 className="login-heading" style={{
             fontFamily: "var(--font-serif)",
             fontSize: "32px",
             fontWeight: 400,

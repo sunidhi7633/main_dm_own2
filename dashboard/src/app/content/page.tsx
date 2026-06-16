@@ -186,7 +186,7 @@ export default function ContentPage() {
   }, []);
 
   useEffect(() => {
-    fetch('http://localhost:8000/api/chat/sessions')
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/chat/sessions`)
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data)) {
@@ -195,7 +195,7 @@ export default function ContentPage() {
       })
       .catch(console.error);
 
-    fetch('http://localhost:8000/api/kb/stats')
+    fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/kb/stats`)
       .then(res => res.json())
       .then(data => setKbStats(data))
       .catch(console.error);
@@ -239,7 +239,7 @@ export default function ContentPage() {
     }
 
     try {
-      const res = await fetch('http://localhost:8000/api/chat', {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: msg, session_id: activeChat === 'new' ? null : activeChat, brand }),
@@ -478,7 +478,7 @@ export default function ContentPage() {
                   setMessages([]); 
                   setMobileSidebar(false); 
                   setLoading(true);
-                  fetch(`http://localhost:8000/api/chat/sessions/${chat.id}`)
+                  fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/chat/sessions/${chat.id}`)
                     .then(res => res.json())
                     .then(data => {
                       if (data.messages) {

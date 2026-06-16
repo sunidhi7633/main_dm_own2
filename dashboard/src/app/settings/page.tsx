@@ -74,7 +74,15 @@ export default function SettingsPage() {
 
   return (
     <div className="page-container" style={{ maxWidth: 720 }}>
-      <h1 className="font-serif" style={{ fontSize: "36px", fontWeight: 500, marginBottom: "8px", color: "var(--ink)", letterSpacing: "-0.5px" }}>
+      <style>{`
+        @media (max-width: 768px) {
+          .settings-h1 { font-size: 28px !important; }
+          .settings-card-header { flex-wrap: wrap !important; gap: 8px !important; }
+          .settings-form-row { flex-direction: column !important; }
+          .settings-form-row > div { flex: 1 1 100% !important; min-width: 0 !important; }
+        }
+      `}</style>
+      <h1 className="font-serif settings-h1" style={{ fontSize: "36px", fontWeight: 500, marginBottom: "8px", color: "var(--ink)", letterSpacing: "-0.5px" }}>
         Settings
       </h1>
       <p style={{ color: "var(--muted)", marginBottom: "40px", fontSize: "15px" }}>
@@ -83,7 +91,7 @@ export default function SettingsPage() {
 
       {/* Recipient list */}
       <div style={{ background: "#fff", borderRadius: "16px", border: "1px solid var(--hairline)", boxShadow: "0 4px 20px rgba(0,0,0,0.03)", overflow: "hidden", marginBottom: "32px" }}>
-        <div style={{ padding: "24px 28px", borderBottom: "1px solid var(--hairline)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+        <div className="settings-card-header" style={{ padding: "24px 28px", borderBottom: "1px solid var(--hairline)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div>
             <h2 style={{ fontSize: "17px", fontWeight: 600, color: "var(--ink)", margin: 0, marginBottom: "4px" }}>Report Recipients</h2>
             <p style={{ fontSize: "13px", color: "var(--muted)", margin: 0 }}>
@@ -156,7 +164,7 @@ export default function SettingsPage() {
         <div style={{ background: "#fff", borderRadius: "16px", border: "1px solid var(--hairline)", boxShadow: "0 4px 20px rgba(0,0,0,0.03)", padding: "24px 28px" }}>
           <h2 style={{ fontSize: "17px", fontWeight: 600, color: "var(--ink)", marginBottom: "20px" }}>Add Recipient</h2>
           <form onSubmit={handleAdd} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-            <div style={{ display: "flex", gap: "14px", flexWrap: "wrap" }}>
+            <div className="settings-form-row" style={{ display: "flex", gap: "14px", flexWrap: "wrap" }}>
               <div style={{ flex: "1 1 200px" }}>
                 <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: "var(--muted)", marginBottom: "6px", textTransform: "uppercase", letterSpacing: "0.5px" }}>Full Name</label>
                 <input required className="input-field" type="text" placeholder="Sanwar Harshwal" value={name} onChange={e => setName(e.target.value)} />
@@ -171,7 +179,7 @@ export default function SettingsPage() {
                 </select>
               </div>
             </div>
-            <div style={{ display: "flex", gap: "14px", flexWrap: "wrap" }}>
+            <div className="settings-form-row" style={{ display: "flex", gap: "14px", flexWrap: "wrap" }}>
               <div style={{ flex: "1 1 200px" }}>
                 <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: "var(--muted)", marginBottom: "6px", textTransform: "uppercase", letterSpacing: "0.5px" }}>Email Address</label>
                 <input required className="input-field" type="email" placeholder="sanwar@harshwal.com" value={email} onChange={e => setEmail(e.target.value)} />

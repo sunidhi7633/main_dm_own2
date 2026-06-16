@@ -145,8 +145,18 @@ export default function ReviewQueue() {
 
   return (
     <div className="page-container" style={{ maxWidth: 1000 }}>
-      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: "32px" }}>
-        <h1 className="font-serif" style={{ fontSize: "36px", fontWeight: 500, color: "var(--ink)", letterSpacing: "-0.5px" }}>
+      <style>{`
+        @media (max-width: 768px) {
+          .rv-title-row { flex-wrap: wrap !important; gap: 8px !important; }
+          .rv-header { font-size: 28px !important; }
+          .rv-card { flex-direction: column !important; padding: 20px !important; }
+          .rv-sidebar { width: 100% !important; border-left: none !important; border-top: 1px solid var(--hairline) !important; padding-left: 0 !important; padding-top: 16px !important; margin-top: 16px !important; flex-wrap: wrap !important; }
+          .rv-sidebar > div:first-child { width: 100% !important; }
+          .rv-sidebar button { flex: 1 1 auto !important; min-width: 0 !important; }
+        }
+      `}</style>
+      <div className="rv-title-row" style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: "32px" }}>
+        <h1 className="font-serif rv-header" style={{ fontSize: "36px", fontWeight: 500, color: "var(--ink)", letterSpacing: "-0.5px" }}>
           Review Queue
         </h1>
         {items.length > 0 && (
@@ -171,7 +181,7 @@ export default function ReviewQueue() {
           const platforms: string[] = Array.isArray(item.platform) ? item.platform : [];
 
           return (
-            <div key={item._id} style={{
+            <div key={item._id} className="rv-card" style={{
               background: "#ffffff",
               border: "1px solid var(--hairline)",
               borderRadius: "16px",
@@ -304,7 +314,7 @@ export default function ReviewQueue() {
               </div>
 
               {/* Right: sidebar — scheduled time + actions */}
-              <div style={{
+              <div className="rv-sidebar" style={{
                 width: "180px",
                 flexShrink: 0,
                 display: "flex",

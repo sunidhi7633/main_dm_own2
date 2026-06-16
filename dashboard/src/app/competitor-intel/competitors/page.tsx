@@ -95,12 +95,22 @@ export default function CompetitorsPage() {
         .ci-input { width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--hairline);font-size:13px;font-family:var(--font-sans);box-sizing:border-box; }
         .ci-input:focus { outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(204,120,92,0.1); }
         .platform-badge { display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:6px;font-size:9px;font-weight:700;text-transform:uppercase; }
+        @media (max-width: 768px) {
+          .ci-outer { padding: 20px 16px !important; }
+          .ci-header-row { flex-wrap: wrap !important; gap: 12px !important; }
+          .ci-add-btn { width: 100% !important; justify-content: center !important; }
+          .ci-search-box { max-width: 100% !important; }
+          .ci-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
+          .ci-modal { max-width: calc(100vw - 32px) !important; }
+          .ci-modal-grid { grid-template-columns: 1fr !important; }
+          .ci-social-grid { grid-template-columns: 1fr 1fr !important; }
+        }
       `}</style>
 
-      <div style={{ padding: "32px 40px", maxWidth: 1200, margin: "0 auto" }}>
+      <div className="ci-outer" style={{ padding: "32px 40px", maxWidth: 1200, margin: "0 auto" }}>
 
         {/* Header */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 28 }}>
+        <div className="ci-header-row" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 28 }}>
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
               <a href="/competitor-intel" style={{ fontSize: 13, color: "var(--muted)", textDecoration: "none" }}>← Competitor Intel</a>
@@ -110,14 +120,14 @@ export default function CompetitorsPage() {
               {competitors.filter(c => c.is_active).length} active · {competitors.length} total
             </p>
           </div>
-          <button onClick={openAdd} style={{ padding: "9px 20px", borderRadius: 8, border: "none", background: "var(--primary)", color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 8 }}>
+          <button onClick={openAdd} className="ci-add-btn" style={{ padding: "9px 20px", borderRadius: 8, border: "none", background: "var(--primary)", color: "#fff", fontSize: 13, fontWeight: 600, cursor: "pointer", display: "flex", alignItems: "center", gap: 8 }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
             Add Competitor
           </button>
         </div>
 
         {/* Search */}
-        <div style={{ position: "relative", marginBottom: 20, maxWidth: 360 }}>
+        <div className="ci-search-box" style={{ position: "relative", marginBottom: 20, maxWidth: 360 }}>
           <svg style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)" }} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search competitors..."
             style={{ width: "100%", padding: "9px 12px 9px 36px", borderRadius: 8, border: "1px solid var(--hairline)", fontSize: 13, fontFamily: "var(--font-sans)", boxSizing: "border-box" }} />
@@ -127,7 +137,7 @@ export default function CompetitorsPage() {
         {loading ? (
           <div style={{ textAlign: "center", padding: 60, color: "var(--muted)" }}>Loading...</div>
         ) : (
-          <div style={{ background: "#fff", borderRadius: 14, border: "1px solid var(--hairline)", overflow: "hidden" }}>
+          <div className="ci-table-wrap" style={{ background: "#fff", borderRadius: 14, border: "1px solid var(--hairline)", overflow: "hidden" }}>
             <table style={{ width: "100%", borderCollapse: "collapse" }}>
               <thead>
                 <tr style={{ background: "var(--surface-soft)" }}>
@@ -214,7 +224,7 @@ export default function CompetitorsPage() {
               <button onClick={() => setShowModal(false)} style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, color: "var(--muted)" }}>×</button>
             </div>
             <div style={{ padding: 24 }}>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 20 }}>
+              <div className="ci-modal-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 20 }}>
                 <div style={{ gridColumn: "1/-1" }}>
                   <label style={{ fontSize: 12, fontWeight: 600, color: "var(--ink)", display: "block", marginBottom: 6 }}>Company Name *</label>
                   <input className="ci-input" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="e.g. Deloitte" />
@@ -230,7 +240,7 @@ export default function CompetitorsPage() {
               </div>
 
               <div style={{ fontSize: 13, fontWeight: 600, color: "var(--ink)", marginBottom: 12 }}>Social Media Handles</div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <div className="ci-social-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                 {PLATFORMS.map(p => (
                   <div key={p}>
                     <label style={{ fontSize: 12, color: "var(--muted)", display: "block", marginBottom: 4, textTransform: "capitalize" }}>{p}</label>
