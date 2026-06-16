@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 import NavBar from "./components/NavBar";
 import { ToastProvider } from "./components/ToastProvider";
+import ErrorBoundary from "./components/ErrorBoundary";
 
 export const metadata: Metadata = {
   title: "Harshwal Automation",
@@ -18,7 +19,7 @@ export default function RootLayout({
       <body>
         <ToastProvider>
           <NavBar />
-          <main>{children}</main>
+          <main><ErrorBoundary>{children}</ErrorBoundary></main>
         </ToastProvider>
       </body>
     </html>

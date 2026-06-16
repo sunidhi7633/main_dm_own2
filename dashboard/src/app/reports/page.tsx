@@ -194,6 +194,18 @@ export default function ShareReports() {
 
   return (
     <div className="page-container" style={{ maxWidth: 1100 }}>
+      <style>{`
+        @media (max-width: 768px) {
+          .page-container { padding: 16px !important; }
+          .rpt-gen-bar { flex-direction: column !important; align-items: stretch !important; }
+          .rpt-gen-bar select, .rpt-gen-bar button { width: 100% !important; min-width: unset !important; }
+          .rpt-cols { flex-direction: column !important; }
+          .rpt-report-row { flex-direction: column !important; align-items: flex-start !important; gap: 10px !important; }
+          .rpt-report-actions { width: 100% !important; }
+          .rpt-report-actions button { flex: 1 !important; }
+          .rpt-modal { width: 100% !important; max-width: 100% !important; border-radius: 0 !important; height: 100% !important; max-height: 100% !important; }
+        }
+      `}</style>
       <h1 className="font-serif" style={{ fontSize: "36px", fontWeight: 500, marginBottom: "8px", color: "var(--ink)", letterSpacing: "-0.5px" }}>
         Reports &amp; Sharing
       </h1>

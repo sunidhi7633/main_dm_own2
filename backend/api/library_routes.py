@@ -62,10 +62,10 @@ def _upload(s3_key: str, data: bytes, content_type: str) -> str:
 
 
 @router.get("/api/library/files/{file_path:path}")
-async def serve_local_file(file_path: str):
+async def serve_local_file(file_path: str, current_user: CurrentUser = Depends(get_current_user)):
     """Serve locally stored assets when S3 is not configured."""
+    check_permission(current_user, "library:read")
     full_path = os.path.realpath(os.path.join(UPLOADS_DIR, file_path))
-    # Prevent path traversal
     if not full_path.startswith(os.path.realpath(UPLOADS_DIR)):
         raise HTTPException(403, "Access denied")
     if not os.path.exists(full_path):

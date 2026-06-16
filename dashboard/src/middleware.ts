@@ -1,40 +1,45 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-// This function can be marked `async` if using `await` inside
 export function middleware(request: NextRequest) {
-  // Check if the user has an auth token cookie
   const token = request.cookies.get('harshwal_token')?.value;
+  const path = request.nextUrl.pathname;
 
-  // Protect all routes except /login and /api/auth
-  const isAuthRoute = request.nextUrl.pathname === '/login' || request.nextUrl.pathname.startsWith('/api/auth');
-  
-  // Exclude static files and Next.js internals
-  const isStaticFile = request.nextUrl.pathname.includes('.') || request.nextUrl.pathname.startsWith('/_next');
+  const isAuthRoute = path === '/login' || path.startsWith('/api/auth');
+  const isStaticFile = path.includes('.') || path.startsWith('/_next');
 
+  // Unauthenticated — redirect to login
   if (!token && !isAuthRoute && !isStaticFile) {
-    // Redirect to login if unauthenticated
     return NextResponse.redirect(new URL('/login', request.url));
   }
 
-  if (token && request.nextUrl.pathname === '/login') {
-    // Redirect to dashboard if already logged in
+  // Already logged in — skip login page
+  if (token && path === '/login') {
     return NextResponse.redirect(new URL('/', request.url));
+  }
+
+  // Role-based guards (only when authenticated)
+  if (token && !isAuthRoute && !isStaticFile) {
+    const role = request.cookies.get('user_role')?.value || 'admin';
+
+    if (role === 'designer') {
+      // designer can only access /designer-queue and /library
+      const allowed =
+        path.startsWith('/designer-queue') || path.startsWith('/library');
+      if (!allowed) {
+        return NextResponse.redirect(new URL('/designer-queue', request.url));
+      }
+    } else {
+      // admin / dm_leader cannot visit the designer queue
+      if (path.startsWith('/designer-queue')) {
+        return NextResponse.redirect(new URL('/', request.url));
+      }
+    }
   }
 
   return NextResponse.next();
 }
 
-// See "Matching Paths" below to learn more
 export const config = {
-  matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - api/og (open graph image generator)
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     */
-    '/((?!api/og|_next/static|_next/image|favicon.ico).*)',
-  ],
+  matcher: ['/((?!api/og|_next/static|_next/image|favicon.ico).*)'],
 };

@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -65,6 +65,8 @@ export default function CompetitorIntelPage() {
   const [selectedRun, setSelectedRun] = useState<Run | null>(null);
   const [schedule, setSchedule] = useState({ cron_hour: 3, cron_minute: 0, is_enabled: 0 });
   const [savingSchedule, setSavingSchedule] = useState(false);
+  const [activeRun, setActiveRun] = useState<Run | null>(null);
+  const activeRunRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const token = () => typeof window !== "undefined" ? localStorage.getItem("access_token") : "";
   const h = () => ({ Authorization: `Bearer ${token()}`, "Content-Type": "application/json" });
@@ -88,13 +90,43 @@ export default function CompetitorIntelPage() {
     return () => clearInterval(iv);
   }, []);
 
+  // Cleanup active-run polling on unmount
+  useEffect(() => {
+    return () => { if (activeRunRef.current) clearInterval(activeRunRef.current); };
+  }, []);
+
   const triggerRun = async () => {
     setRunning(true);
     try {
       const res = await fetch(`${API}/api/ci/run`, { method: "POST", headers: h(), body: JSON.stringify({}) });
-      await res.json();
+      const data = await res.json();
+      const runId = data.run_id;
+
+      if (runId) {
+        if (activeRunRef.current) clearInterval(activeRunRef.current);
+
+        const pollActiveRun = async () => {
+          try {
+            const r = await fetch(`${API}/api/ci/runs/${runId}`, { headers: h() });
+            if (r.ok) {
+              const run: Run = await r.json();
+              setActiveRun(run);
+              if (run.status === "completed" || run.status === "failed") {
+                if (activeRunRef.current) clearInterval(activeRunRef.current);
+                activeRunRef.current = null;
+                fetchAll();
+              }
+            }
+          } catch {}
+        };
+
+        pollActiveRun();
+        activeRunRef.current = setInterval(pollActiveRun, 5000);
+      }
+
       setTimeout(fetchAll, 1500);
-    } finally {
+    } catch {}
+    finally {
       setTimeout(() => setRunning(false), 3000);
     }
   };
@@ -106,23 +138,105 @@ export default function CompetitorIntelPage() {
     } finally { setSavingSchedule(false); }
   };
 
+  const dismissActiveRun = () => {
+    setActiveRun(null);
+    if (activeRunRef.current) { clearInterval(activeRunRef.current); activeRunRef.current = null; }
+  };
+
   const latestRun = runs[0] ?? stats?.latest_run;
 
   return (
     <>
       <style>{`
         @keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.4} }
+        @keyframes slideUp { from{transform:translateY(16px);opacity:0} to{transform:translateY(0);opacity:1} }
         .ci-card { background:#fff; border:1px solid var(--hairline); border-radius:14px; padding:24px; }
         .ci-stat { background:var(--surface-soft); border-radius:12px; padding:20px; }
         .run-row { padding:12px 16px; border-radius:10px; border:1px solid var(--hairline); cursor:pointer; transition:background 150ms; margin-bottom:8px; }
         .run-row:hover { background:var(--surface-soft); }
         .run-row.selected { border-color:var(--primary); background:#fdf6f3; }
+        @media (max-width:768px) {
+          .ci-outer { padding:20px 16px !important; }
+          .ci-header { flex-direction:column !important; align-items:flex-start !important; gap:12px !important; }
+          .ci-header > div:last-child { width:100%; }
+          .ci-header > div:last-child > button { flex:1; }
+          .ci-stats { grid-template-columns:repeat(2,1fr) !important; }
+          .ci-main { grid-template-columns:1fr !important; }
+          .ci-card { padding:16px !important; }
+          .ci-run-counts { grid-template-columns:repeat(2,1fr) !important; }
+          .ci-toast { width:calc(100vw - 32px) !important; left:16px !important; right:16px !important; }
+        }
       `}</style>
 
-      <div style={{ padding: "32px 40px", maxWidth: 1200, margin: "0 auto" }}>
+      {/* Active-run progress toast */}
+      {activeRun && (
+        <div className="ci-toast" style={{
+          position: "fixed", bottom: 24, right: 24, zIndex: 1000, width: 320,
+          background: "#fff", borderRadius: 14, padding: "16px 20px",
+          boxShadow: "0 8px 32px rgba(0,0,0,0.14), 0 0 0 1px rgba(0,0,0,0.05)",
+          animation: "slideUp 200ms ease",
+        }}>
+          <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 10 }}>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "var(--ink)" }}>
+                Pipeline Run #{activeRun.id}
+              </div>
+              <span style={{
+                display: "inline-block", marginTop: 4,
+                padding: "2px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600,
+                background: STATUS_BG[activeRun.status] || "#f3f4f6",
+                color: STATUS_COLOR[activeRun.status] || "#6b7280",
+              }}>
+                {activeRun.status.toUpperCase()}
+              </span>
+            </div>
+            <button onClick={dismissActiveRun}
+              style={{ background: "none", border: "none", cursor: "pointer", fontSize: 20, color: "var(--muted)", lineHeight: 1, padding: 0 }}>
+              ×
+            </button>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 12 }}>
+            {[
+              ["Collected", activeRun.posts_collected],
+              ["Scored", activeRun.posts_scored],
+              ["Top", activeRun.posts_top],
+              ["Generated", activeRun.content_generated],
+            ].map(([label, val]) => (
+              <div key={label as string} style={{ padding: "6px 10px", background: "var(--surface-soft)", borderRadius: 6, textAlign: "center" }}>
+                <div style={{ fontSize: 15, fontWeight: 700, color: "var(--ink)" }}>{val ?? 0}</div>
+                <div style={{ fontSize: 10, color: "var(--muted)", marginTop: 1 }}>{label}</div>
+              </div>
+            ))}
+          </div>
+
+          <StepBar run={activeRun} />
+
+          {activeRun.step && activeRun.status === "running" && (
+            <div style={{ marginTop: 8, fontSize: 11, color: "#3b82f6", fontWeight: 500 }}>
+              ↳ {activeRun.step}
+            </div>
+          )}
+
+          {(activeRun.status === "completed" || activeRun.status === "failed") && (
+            <div style={{ marginTop: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              {activeRun.status === "completed" && (
+                <a href="/competitor-intel/generated" style={{ fontSize: 12, color: "var(--primary)", fontWeight: 600, textDecoration: "none" }}>
+                  Review content →
+                </a>
+              )}
+              <button onClick={dismissActiveRun} style={{ fontSize: 12, color: "var(--muted)", background: "none", border: "none", cursor: "pointer", marginLeft: "auto" }}>
+                Dismiss
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="ci-outer" style={{ padding: "32px 40px", maxWidth: 1200, margin: "0 auto" }}>
 
         {/* Header */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 32 }}>
+        <div className="ci-header" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 32 }}>
           <div>
             <h1 style={{ fontSize: 26, fontWeight: 700, color: "var(--ink)", margin: 0 }}>Competitor Intelligence</h1>
             <p style={{ fontSize: 14, color: "var(--muted)", margin: "4px 0 0" }}>
@@ -149,7 +263,7 @@ export default function CompetitorIntelPage() {
         </div>
 
         {/* Stat cards */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 16, marginBottom: 28 }}>
+        <div className="ci-stats" style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 16, marginBottom: 28 }}>
           {[
             { label: "Competitors Monitored", value: stats?.total_competitors ?? 0, icon: "👥" },
             { label: "Pipeline Runs", value: stats?.total_runs ?? 0, icon: "⚙️" },
@@ -165,7 +279,7 @@ export default function CompetitorIntelPage() {
           ))}
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 360px", gap: 20 }}>
+        <div className="ci-main" style={{ display: "grid", gridTemplateColumns: "1fr 360px", gap: 20 }}>
 
           {/* Left — latest run + history */}
           <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
@@ -191,7 +305,7 @@ export default function CompetitorIntelPage() {
                     {latestRun.started_at ? new Date(latestRun.started_at).toLocaleString() : ""}
                   </span>
                 </div>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12, marginBottom: 16 }}>
+                <div className="ci-run-counts" style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 12, marginBottom: 16 }}>
                   {[
                     ["Posts Collected", latestRun.posts_collected],
                     ["Posts Scored", latestRun.posts_scored],

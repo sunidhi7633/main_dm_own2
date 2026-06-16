@@ -25,6 +25,9 @@ export default function DMLibrary() {
   const toast = useToast();
   const [assets, setAssets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const PER_PAGE = 40;
 
   // Filters
   const [filterType, setFilterType] = useState("All");
@@ -47,15 +50,17 @@ export default function DMLibrary() {
   const role = typeof window !== "undefined" ? localStorage.getItem("user_role") ?? "admin" : "admin";
   const canDelete = role === "dm_leader" || role === "designer" || role === "admin";
 
-  const fetchAssets = async () => {
+  const fetchAssets = async (targetPage = page) => {
     try {
       const token = localStorage.getItem("access_token");
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/library/assets`, {
+      const params = new URLSearchParams({ page: String(targetPage), per_page: String(PER_PAGE) });
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/library/assets?${params}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
         const data = await res.json();
         setAssets(data.assets ?? []);
+        setTotal(data.total ?? 0);
       }
     } catch (e) {
       console.error(e);
@@ -64,7 +69,8 @@ export default function DMLibrary() {
     }
   };
 
-  useEffect(() => { fetchAssets(); }, []);
+  useEffect(() => { fetchAssets(page); }, [page]);
+  useEffect(() => { setPage(1); fetchAssets(1); }, [filterType, filterBrand, search]);
 
   // Derived filtered list
   const filtered = assets.filter(a => {
@@ -460,6 +466,29 @@ export default function DMLibrary() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Pagination */}
+      {!loading && total > PER_PAGE && (
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, marginTop: 28 }}>
+          <button
+            disabled={page === 1}
+            onClick={() => setPage(p => p - 1)}
+            style={{ padding: "7px 18px", borderRadius: 8, border: "1px solid var(--hairline)", background: page === 1 ? "var(--surface-soft)" : "#fff", cursor: page === 1 ? "default" : "pointer", fontSize: 13, fontWeight: 500, color: page === 1 ? "var(--muted)" : "var(--ink)" }}
+          >
+            ← Prev
+          </button>
+          <span style={{ fontSize: 13, color: "var(--muted)" }}>
+            Page {page} of {Math.ceil(total / PER_PAGE)} &middot; {total} total
+          </span>
+          <button
+            disabled={page * PER_PAGE >= total}
+            onClick={() => setPage(p => p + 1)}
+            style={{ padding: "7px 18px", borderRadius: 8, border: "1px solid var(--hairline)", background: page * PER_PAGE >= total ? "var(--surface-soft)" : "#fff", cursor: page * PER_PAGE >= total ? "default" : "pointer", fontSize: 13, fontWeight: 500, color: page * PER_PAGE >= total ? "var(--muted)" : "var(--ink)" }}
+          >
+            Next →
+          </button>
         </div>
       )}
     </div>

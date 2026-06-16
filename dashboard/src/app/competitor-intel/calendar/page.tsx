@@ -223,16 +223,28 @@ export default function CalendarPage() {
   const selectedEvents = selectedDay ? (eventsByDay[selectedDay] || []) : [];
 
   return (
-    <div style={{ padding: "32px 40px", maxWidth: 1200, margin: "0 auto" }}>
+    <div style={{ padding: "32px 40px", maxWidth: 1200, margin: "0 auto" }} className="cal-page">
+      <style>{`
+        @media (max-width: 768px) {
+          .cal-page { padding: 16px !important; }
+          .cal-header { flex-direction: column !important; align-items: flex-start !important; gap: 14px !important; }
+          .cal-header-actions { align-items: flex-start !important; }
+          .cal-grid-layout { flex-direction: column !important; }
+          .cal-day-panel { width: 100% !important; }
+          .cal-cell { min-height: 60px !important; padding: 4px 5px !important; }
+          .cal-cell-num { font-size: 11px !important; }
+          .cal-event-chip { font-size: 9px !important; }
+        }
+      `}</style>
 
       {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 28 }}>
+      <div className="cal-header" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 28 }}>
         <div>
           <a href="/competitor-intel" style={{ fontSize: 13, color: "var(--muted)", textDecoration: "none" }}>← Competitor Intel</a>
           <h1 style={{ fontSize: 24, fontWeight: 700, color: "var(--ink)", margin: "6px 0 4px" }}>Content Calendar</h1>
           <p style={{ fontSize: 14, color: "var(--muted)", margin: 0 }}>Manage monthly events that drive AI content generation</p>
         </div>
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 10 }}>
+        <div className="cal-header-actions" style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 10 }}>
           <div style={{ display: "flex", gap: 10 }}>
             <button onClick={() => setShowBulk(true)} style={{ padding: "9px 18px", fontSize: 13, fontWeight: 600, border: "1px solid var(--hairline)", borderRadius: 8, background: "#fff", cursor: "pointer", color: "var(--ink)" }}>
               Bulk Upload
@@ -283,7 +295,7 @@ export default function CalendarPage() {
       </div>
 
       {/* Calendar grid + day detail */}
-      <div style={{ display: "flex", gap: 24, alignItems: "flex-start" }}>
+      <div className="cal-grid-layout" style={{ display: "flex", gap: 24, alignItems: "flex-start" }}>
         <div style={{ flex: 1 }}>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 1, marginBottom: 1 }}>
             {DAYS.map(d => (
@@ -300,9 +312,9 @@ export default function CalendarPage() {
               const isToday = toLocalDateStr(today) === dateStr;
               const isSelected = selectedDay === dateStr;
               return (
-                <div key={idx} onClick={() => setSelectedDay(isSelected ? null : dateStr)}
+                <div key={idx} className="cal-cell" onClick={() => setSelectedDay(isSelected ? null : dateStr)}
                   style={{ minHeight: 90, padding: "6px 8px", background: isSelected ? "#eff6ff" : "#fff", border: isSelected ? "2px solid #3b82f6" : isToday ? "2px solid var(--primary)" : "1px solid var(--hairline)", borderRadius: 6, cursor: "pointer", transition: "border 150ms, background 150ms", position: "relative" }}>
-                  <div style={{ fontSize: 13, fontWeight: isToday ? 700 : 500, color: isToday ? "var(--primary)" : "var(--ink)", marginBottom: 4, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div className="cal-cell-num" style={{ fontSize: 13, fontWeight: isToday ? 700 : 500, color: isToday ? "var(--primary)" : "var(--ink)", marginBottom: 4, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     {day}
                     {isToday && <span style={{ fontSize: 9, background: "var(--primary)", color: "#fff", borderRadius: 4, padding: "1px 5px", fontWeight: 700 }}>TODAY</span>}
                   </div>
@@ -332,7 +344,7 @@ export default function CalendarPage() {
         </div>
 
         {selectedDay && (
-          <div style={{ width: 300, flexShrink: 0, background: "#fff", border: "1px solid var(--hairline)", borderRadius: 12, padding: 20, alignSelf: "flex-start" }}>
+          <div className="cal-day-panel" style={{ width: 300, flexShrink: 0, background: "#fff", border: "1px solid var(--hairline)", borderRadius: 12, padding: 20, alignSelf: "flex-start" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
               <div>
                 <div style={{ fontSize: 12, color: "var(--muted)", fontWeight: 500 }}>{MONTHS[month - 1]} {year}</div>

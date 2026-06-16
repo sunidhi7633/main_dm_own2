@@ -274,7 +274,7 @@ def trend_report(run_id: Optional[int] = None, db: Session = Depends(get_db),
 @router.get("/api/ci/generated")
 def list_generated(run_id: Optional[int] = None, brand: Optional[str] = None,
                    platform: Optional[str] = None, status: Optional[str] = None,
-                   limit: int = 100, db: Session = Depends(get_db),
+                   limit: int = 30, offset: int = 0, db: Session = Depends(get_db),
                    current_user: CurrentUser = Depends(get_current_user)):
     check_permission(current_user, "analytics:read")
     if not run_id:
@@ -289,7 +289,7 @@ def list_generated(run_id: Optional[int] = None, brand: Optional[str] = None,
     if brand:    q = q.filter(models.CIGeneratedContent.brand == brand)
     if platform: q = q.filter(models.CIGeneratedContent.platform == platform)
     if status:   q = q.filter(models.CIGeneratedContent.status == status)
-    return [_sg(g) for g in q.order_by(models.CIGeneratedContent.id).limit(limit).all()]
+    return [_sg(g) for g in q.order_by(models.CIGeneratedContent.id).offset(offset).limit(limit).all()]
 
 
 @router.patch("/api/ci/generated/{gid}")

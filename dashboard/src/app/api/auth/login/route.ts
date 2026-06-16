@@ -20,15 +20,15 @@ export async function POST(request: Request) {
         access_token: data.access_token,
         role: data.role ?? "admin",
       });
-      nextResponse.cookies.set({
-        name: 'harshwal_token',
-        value: data.access_token,
+      const cookieOpts = {
         httpOnly: true,
         path: '/',
         secure: process.env.NODE_ENV === 'production',
-        maxAge: 60 * 60 * 24 * 7, // 1 week
-      });
-      
+        maxAge: 60 * 60 * 24 * 7,
+      };
+      nextResponse.cookies.set({ name: 'harshwal_token', value: data.access_token, ...cookieOpts });
+      nextResponse.cookies.set({ name: 'user_role', value: data.role ?? 'admin', ...cookieOpts });
+
       return nextResponse;
     } else {
       return NextResponse.json({ error: 'Invalid credentials' }, { status: 401 });
