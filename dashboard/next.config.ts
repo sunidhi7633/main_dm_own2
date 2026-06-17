@@ -10,12 +10,6 @@ const nextConfig: NextConfig = {
         destination: "/:path*",
         permanent: false,
       },
-      // Review Queue merged into Competitor Intel
-      {
-        source: "/review",
-        destination: "/competitor-intel/generated",
-        permanent: false,
-      },
     ];
   },
 };

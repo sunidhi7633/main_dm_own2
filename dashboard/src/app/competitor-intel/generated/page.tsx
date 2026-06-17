@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 import { useEffect, useState } from "react";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001";
@@ -9,6 +9,7 @@ type Post = {
   headline: string; content: string; cta: string; hashtags: string[];
   quality_brand_score: number; quality_originality_score: number; quality_readability_score: number;
   status: string; rejection_reason: string;
+  source_type: string; calendar_event_name: string;
   scheduled_at: string | null; created_at: string;
 };
 
@@ -31,6 +32,24 @@ const STATUS_STYLE: Record<string, { bg: string; color: string }> = {
   under_review: { bg: "#fce7f3", color: "#9d174d" },
 };
 
+function SourceBadge({ source_type, calendar_event_name, size = "sm" }: { source_type: string; calendar_event_name?: string; size?: "sm" | "md" }) {
+  const isCalendar = source_type === "calendar_event";
+  const pad = size === "md" ? "4px 14px" : "2px 10px";
+  const fs = size === "md" ? 12 : 11;
+  if (isCalendar) {
+    return (
+      <span style={{ padding: pad, borderRadius: 20, fontSize: fs, fontWeight: 700, background: "#ccfbf1", color: "#0d9488", display: "inline-flex", alignItems: "center", gap: 4 }}>
+        📅 Calendar Event{calendar_event_name ? `: ${calendar_event_name}` : ""}
+      </span>
+    );
+  }
+  return (
+    <span style={{ padding: pad, borderRadius: 20, fontSize: fs, fontWeight: 700, background: "#ede9fe", color: "#7c3aed", display: "inline-flex", alignItems: "center", gap: 4 }}>
+      🏆 Competitor Intel
+    </span>
+  );
+}
+
 function ScoreBar({ label, score, color }: { label: string; score: number; color: string }) {
   return (
     <div>
@@ -52,6 +71,7 @@ export default function GeneratedPage() {
   const [brandFilter, setBrandFilter] = useState("all");
   const [platformFilter, setPlatformFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("draft");
+  const [sourceFilter, setSourceFilter] = useState("all");
   const [selected, setSelected] = useState<Post | null>(null);
   const [editContent, setEditContent] = useState("");
   const [rejectReason, setRejectReason] = useState("");
@@ -73,13 +93,14 @@ export default function GeneratedPage() {
         if (brandFilter !== "all") params.set("brand", brandFilter);
         if (platformFilter !== "all") params.set("platform", platformFilter);
         if (statusFilter !== "all") params.set("status", statusFilter);
+        if (sourceFilter !== "all") params.set("source_type", sourceFilter);
         const r = await fetch(`${API}/api/ci/generated?${params}`, { headers: h() });
         const d = await r.json();
         setPosts(Array.isArray(d) ? d : []);
       } finally { setLoading(false); }
     };
     load();
-  }, [brandFilter, platformFilter, statusFilter, page]);
+  }, [brandFilter, platformFilter, statusFilter, sourceFilter, page]);
 
   const setFilter = (setter: (v: string) => void) => (v: string) => {
     setter(v);
@@ -114,6 +135,11 @@ export default function GeneratedPage() {
   const brands = ["all", "hcllp", "blue_arrow_cpa", "advisory"];
   const platforms = ["all", "linkedin", "facebook", "twitter", "instagram"];
   const statuses = ["all", "draft", "approved", "rejected", "scheduled"];
+  const sources = [
+    { value: "all", label: "All Sources" },
+    { value: "competitor_intel", label: "🏆 Competitor Intel" },
+    { value: "calendar_event", label: "📅 Calendar Event" },
+  ];
 
   const hasPrev = page > 1;
   const hasNext = posts.length === PAGE_SIZE;
@@ -124,15 +150,20 @@ export default function GeneratedPage() {
         .gen-card { background:#fff;border:1px solid var(--hairline);border-radius:12px;padding:16px;cursor:pointer;transition:box-shadow 150ms,border-color 150ms; }
         .gen-card:hover { box-shadow:0 4px 16px rgba(0,0,0,0.08);border-color:#d1ccc6; }
         .gen-card.selected { border-color:var(--primary);box-shadow:0 0 0 3px rgba(204,120,92,0.1); }
+        .gen-card.source-competitor { border-left:3px solid #7c3aed; }
+        .gen-card.source-calendar { border-left:3px solid #0d9488; }
         .detail-panel { background:#fff;border:1px solid var(--hairline);border-radius:14px;position:sticky;top:80px;max-height:calc(100vh - 100px);overflow-y:auto; }
         .action-btn { width:100%;padding:10px 0;border-radius:8px;border:none;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--font-sans); }
         .filter-btn { padding:6px 14px;border-radius:20px;border:1px solid var(--hairline);background:#fff;font-size:12px;font-weight:500;cursor:pointer;font-family:var(--font-sans);transition:all 120ms; }
         .filter-btn.active { background:var(--primary);color:#fff;border-color:var(--primary); }
+        .filter-btn.source-ci.active { background:#7c3aed;border-color:#7c3aed;color:#fff; }
+        .filter-btn.source-cal.active { background:#0d9488;border-color:#0d9488;color:#fff; }
         textarea.ci-ta { width:100%;border:1px solid var(--hairline);border-radius:8px;padding:10px;font-size:13px;font-family:var(--font-sans);resize:vertical;line-height:1.6; }
         textarea.ci-ta:focus { outline:none;border-color:var(--primary); }
         .pager-btn { padding:7px 16px;border-radius:8px;border:1px solid var(--hairline);font-size:13px;font-weight:500;cursor:pointer;font-family:var(--font-sans);transition:background 120ms; }
         .pager-btn:disabled { opacity:0.4;cursor:default; }
         .pager-btn:not(:disabled):hover { background:var(--surface-soft); }
+        .filter-row { display:flex;gap:8px;flexWrap:wrap;align-items:center;margin-bottom:10px; }
         @media (max-width:768px) {
           .gen-outer { padding:16px !important; }
           .gen-layout { grid-template-columns:1fr !important; }
@@ -144,12 +175,50 @@ export default function GeneratedPage() {
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
           <a href="/competitor-intel" style={{ fontSize: 13, color: "var(--muted)", textDecoration: "none" }}>← Competitor Intel</a>
         </div>
-        <div style={{ marginBottom: 24 }}>
-          <h1 style={{ fontSize: 24, fontWeight: 700, color: "var(--ink)", margin: "0 0 4px" }}>Generated Content Review</h1>
-          <p style={{ fontSize: 13, color: "var(--muted)", margin: 0 }}>Review, edit, approve or reject AI-generated posts before publishing</p>
+        <div style={{ marginBottom: 16 }}>
+          <h1 style={{ fontSize: 24, fontWeight: 700, color: "var(--ink)", margin: "0 0 4px" }}>Generated Content</h1>
+          <p style={{ fontSize: 13, color: "var(--muted)", margin: 0 }}>Browse all CI-generated posts. Use the Review Queue to approve or reject by type.</p>
         </div>
 
-        {/* Filters */}
+        {/* Review Queue shortcut banner */}
+        <div style={{ marginBottom: 20, padding: "12px 16px", background: "linear-gradient(135deg,#ede9fe,#ccfbf1)", borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <span style={{ fontSize: 18 }}>📋</span>
+            <div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: "#4c1d95" }}>Review Queue — 2 sub-types</div>
+              <div style={{ fontSize: 12, color: "#6d28d9" }}>Approve calendar posts and competitor posts separately</div>
+            </div>
+          </div>
+          <div style={{ display: "flex", gap: 8 }}>
+            <a href="/review" style={{ padding: "7px 16px", background: "#7c3aed", color: "#fff", borderRadius: 8, fontSize: 12, fontWeight: 700, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 5 }}>
+              📅 Calendar Review
+            </a>
+            <a href="/review" style={{ padding: "7px 16px", background: "#0d9488", color: "#fff", borderRadius: 8, fontSize: 12, fontWeight: 700, textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 5 }}>
+              🏆 Competitor Review
+            </a>
+          </div>
+        </div>
+
+        {/* Source type filter — most prominent, shown first */}
+        <div style={{ marginBottom: 16, padding: "10px 14px", background: "var(--surface-soft)", borderRadius: 10, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+          <span style={{ fontSize: 12, fontWeight: 700, color: "var(--ink)", marginRight: 4 }}>Post Type:</span>
+          {sources.map(s => (
+            <button
+              key={s.value}
+              className={`filter-btn${sourceFilter === s.value ? " active" : ""}${s.value === "competitor_intel" ? " source-ci" : ""}${s.value === "calendar_event" ? " source-cal" : ""}`}
+              onClick={() => setFilter(setSourceFilter)(s.value)}
+            >
+              {s.label}
+            </button>
+          ))}
+          <span style={{ fontSize: 12, color: "var(--muted)", marginLeft: 8 }}>
+            {sourceFilter === "competitor_intel" && "Showing only posts inspired by competitor analysis"}
+            {sourceFilter === "calendar_event" && "Showing only posts generated for calendar events"}
+            {sourceFilter === "all" && "Showing all generated posts (competitor + calendar)"}
+          </span>
+        </div>
+
+        {/* Other filters */}
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 20 }}>
           <span style={{ fontSize: 12, color: "var(--muted)", alignSelf: "center", marginRight: 4 }}>Brand:</span>
           {brands.map(b => (
@@ -190,10 +259,15 @@ export default function GeneratedPage() {
                   const [pc, pbg] = PLATFORM_COLOR[p.platform] ?? ["#666", "#f3f4f6"];
                   const ss = STATUS_STYLE[p.status] ?? STATUS_STYLE.draft;
                   const avg = avgScore(p);
+                  const srcClass = p.source_type === "calendar_event" ? "source-calendar" : "source-competitor";
                   return (
-                    <div key={p.id} className={`gen-card${selected?.id === p.id ? " selected" : ""}`} onClick={() => openPost(p)}>
+                    <div key={p.id} className={`gen-card ${srcClass}${selected?.id === p.id ? " selected" : ""}`} onClick={() => openPost(p)}>
                       <div style={{ display: "flex", alignItems: "flex-start", gap: 12 }}>
                         <div style={{ flex: 1, minWidth: 0 }}>
+                          {/* Source badge — first, most prominent */}
+                          <div style={{ marginBottom: 6 }}>
+                            <SourceBadge source_type={p.source_type} calendar_event_name={p.calendar_event_name} />
+                          </div>
                           <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 8 }}>
                             <span style={{ padding: "2px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600, background: bbg, color: bc }}>{BRAND_LABEL[p.brand] || p.brand}</span>
                             <span style={{ padding: "2px 10px", borderRadius: 20, fontSize: 11, fontWeight: 600, background: pbg, color: pc, textTransform: "capitalize" }}>{p.platform}</span>
@@ -217,11 +291,11 @@ export default function GeneratedPage() {
                 {posts.length > 0 && (
                   <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 12, justifyContent: "center" }}>
                     <button className="pager-btn" disabled={!hasPrev} onClick={() => setPage(p => p - 1)} style={{ background: "#fff" }}>
-                      â† Prev
+                      ← Prev
                     </button>
                     <span style={{ fontSize: 13, color: "var(--muted)", minWidth: 60, textAlign: "center" }}>Page {page}</span>
                     <button className="pager-btn" disabled={!hasNext} onClick={() => setPage(p => p + 1)} style={{ background: "#fff" }}>
-                      Next â†’
+                      Next →
                     </button>
                   </div>
                 )}
@@ -236,6 +310,11 @@ export default function GeneratedPage() {
                   </div>
 
                   <div style={{ padding: 20 }}>
+                    {/* Source badge — top of detail panel, large */}
+                    <div style={{ marginBottom: 14 }}>
+                      <SourceBadge source_type={selected.source_type} calendar_event_name={selected.calendar_event_name} size="md" />
+                    </div>
+
                     {/* Badges */}
                     <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 16 }}>
                       {(() => { const [bc, bbg] = BRAND_COLOR[selected.brand] ?? ["#666", "#f3f4f6"]; return <span style={{ padding: "3px 12px", borderRadius: 20, fontSize: 12, fontWeight: 600, background: bbg, color: bc }}>{BRAND_LABEL[selected.brand] || selected.brand}</span>; })()}
@@ -295,16 +374,16 @@ export default function GeneratedPage() {
                       <div style={{ marginTop: 20, display: "flex", flexDirection: "column", gap: 8 }}>
                         <button className="action-btn" onClick={() => { setAction("approve"); submitAction(); }}
                           style={{ background: "#22c55e", color: "#fff" }} disabled={saving}>
-                          {saving && action === "approve" ? "Approving..." : " Approve"}
+                          {saving && action === "approve" ? "Approving..." : "✓ Approve"}
                         </button>
                         <div style={{ display: "flex", gap: 8 }}>
                           <button className="action-btn" onClick={() => setAction(action === "schedule" ? null : "schedule")}
                             style={{ background: action === "schedule" ? "#b45309" : "#fef3c7", color: action === "schedule" ? "#fff" : "#b45309", flex: 1 }}>
-                             Schedule
+                            🗓 Schedule
                           </button>
                           <button className="action-btn" onClick={() => setAction(action === "reject" ? null : "reject")}
                             style={{ background: action === "reject" ? "#ef4444" : "#fee2e2", color: action === "reject" ? "#fff" : "#ef4444", flex: 1 }}>
-                             Reject
+                            ✕ Reject
                           </button>
                         </div>
                         {(action === "reject" || action === "schedule") && (

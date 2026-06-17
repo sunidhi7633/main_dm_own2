@@ -52,6 +52,23 @@ async def lifespan(app: FastAPI):
         Base.metadata.create_all(bind=engine)
     except Exception as e:
         print(f"Warning: Could not create database tables: {e}")
+
+    # Migration: add source_type / calendar_event columns to ci_generated_content
+    try:
+        with engine.connect() as conn:
+            for col, typedef in [
+                ("source_type", "VARCHAR DEFAULT 'competitor_intel'"),
+                ("calendar_event_id", "INTEGER"),
+                ("calendar_event_name", "VARCHAR"),
+            ]:
+                try:
+                    conn.execute(text(f"ALTER TABLE ci_generated_content ADD COLUMN IF NOT EXISTS {col} {typedef}"))
+                    conn.commit()
+                except Exception:
+                    conn.rollback()
+        print("Migration: ci_generated_content source columns ensured.")
+    except Exception as e:
+        print(f"Warning: source_type migration skipped (non-fatal): {e}")
         
     # Verify MongoDB Connection
     from mongo import client as mongo_client

@@ -6,13 +6,17 @@ import { useToast } from "../components/ToastProvider";
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001";
 
 type Post = {
-  id: number;
-  title: string;
-  platform: "LinkedIn" | "Facebook" | "Instagram";
-  caption: string;
-  tag: string;
+  _id: string;
+  brand: string;
+  platform: string[];
+  content_body: string;
+  format: string;
   status: string;
-  age?: string;
+  scheduled_at?: string;
+  ai_prescore?: { score: number };
+  faq_num?: number;
+  tagline_num?: number;
+  designer_approved?: boolean;
 };
 
 
@@ -40,12 +44,12 @@ export default function SMOWorkflowPage() {
   const toast = useToast();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [mobileSidebar, setMobileSidebar] = useState(false);
-  const [activePipeline, setActivePipeline] = useState('designer_review');
+  const [activePipeline, setActivePipeline] = useState('pending_review');
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [quickTopic, setQuickTopic] = useState("");
   const [generatingQuick, setGeneratingQuick] = useState(false);
-  const [editingPostId, setEditingPostId] = useState<number | null>(null);
+  const [editingPostId, setEditingPostId] = useState<string | null>(null);
   const [editCaption, setEditCaption] = useState<string>("");
   const [runningPipeline, setRunningPipeline] = useState(false);
   const [runMsg, setRunMsg] = useState("");
@@ -71,10 +75,15 @@ export default function SMOWorkflowPage() {
 
   const fetchPosts = async () => {
     try {
-      const res = await fetch("${API}/api/smo/posts");
-      if (res.ok) {
-        setPosts(await res.json());
-      }
+      const token = localStorage.getItem("access_token");
+      const headers = { Authorization: `Bearer ${token}` };
+      const [pendingRes, approvedRes] = await Promise.all([
+        fetch(`${API}/api/review/queue`, { headers }),
+        fetch(`${API}/api/review/queue/approved`, { headers }).catch(() => null),
+      ]);
+      const pending: Post[] = pendingRes.ok ? await pendingRes.json() : [];
+      const approved: Post[] = (approvedRes && approvedRes.ok) ? await approvedRes.json() : [];
+      setPosts([...pending, ...approved]);
     } catch (err) {
       console.error(err);
     } finally {
@@ -86,18 +95,32 @@ export default function SMOWorkflowPage() {
     fetchPosts();
   }, []);
 
-  const handleApprove = async (id: number) => {
+  const handleApprove = async (id: string) => {
     try {
-      await fetch(`${API}/api/smo/approve/${id}`, { method: 'PATCH' });
+      const token = localStorage.getItem("access_token");
+      await fetch(`${API}/api/review/approve/${id}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      toast.success("Post approved.");
       fetchPosts();
     } catch (err) {
       console.error(err);
     }
   };
 
-  const handleReject = async (id: number) => {
+  const handleReject = async (id: string) => {
+    const reason = prompt("Enter rejection reason:");
+    if (!reason) return;
     try {
-      await fetch(`${API}/api/smo/reject/${id}`, { method: 'PATCH' });
+      const token = localStorage.getItem("access_token");
+      await fetch(`${API}/api/review/reject/${id}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ reason }),
+      });
+      toast.success("Rejected. Regeneration queued.");
       fetchPosts();
     } catch (err) {
       console.error(err);
@@ -105,8 +128,8 @@ export default function SMOWorkflowPage() {
   };
 
   const handleEdit = (post: Post) => {
-    setEditingPostId(post.id);
-    setEditCaption(post.caption);
+    setEditingPostId(post._id);
+    setEditCaption(typeof post.content_body === "string" ? post.content_body : JSON.stringify(post.content_body));
   };
 
   const handleCancelEdit = () => {
@@ -114,14 +137,16 @@ export default function SMOWorkflowPage() {
     setEditCaption("");
   };
 
-  const handleSaveEdit = async (id: number) => {
+  const handleSaveEdit = async (id: string) => {
     try {
-      await fetch(`${API}/api/smo/edit/${id}`, {
-        method: 'PATCH',
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ caption: editCaption })
+      const token = localStorage.getItem("access_token");
+      await fetch(`${API}/api/review/edit/${id}`, {
+        method: 'PUT',
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ content_body: editCaption }),
       });
       setEditingPostId(null);
+      toast.success("Edit saved.");
       fetchPosts();
     } catch (err) {
       console.error(err);
@@ -166,13 +191,18 @@ export default function SMOWorkflowPage() {
     }
   };
 
-  // Filter posts by pipeline stage
-  const visiblePosts = posts.filter(p => p.status === activePipeline || (activePipeline === 'ready' && p.status === 'published'));
+  // Filter posts by pipeline stage using real MongoDB statuses
+  const visiblePosts = posts.filter(p => {
+    if (activePipeline === 'pending_review') return p.status === 'pending_review';
+    if (activePipeline === 'designer_pending') return p.status === 'designer_pending';
+    if (activePipeline === 'approved') return p.status === 'approved' || p.status === 'scheduled';
+    return false;
+  });
 
   const pipelineStages = [
-    { id: 'designer_review', label: "Designer Review", count: posts.filter(p => p.status === 'designer_review').length },
-    { id: 'manager_review', label: "Manager Review", count: posts.filter(p => p.status === 'manager_review').length },
-    { id: 'ready', label: "Ready to Publish", count: posts.filter(p => p.status === 'published').length },
+    { id: 'pending_review', label: "Manager Review", count: posts.filter(p => p.status === 'pending_review').length },
+    { id: 'designer_pending', label: "Designer Review", count: posts.filter(p => p.status === 'designer_pending').length },
+    { id: 'approved', label: "Ready to Publish", count: posts.filter(p => p.status === 'approved' || p.status === 'scheduled').length },
     { id: 'history', label: "Published History", count: null },
   ];
 
@@ -466,62 +496,48 @@ export default function SMOWorkflowPage() {
                 </p>
               </div>
 
-              {visiblePosts.map(post => (
-                <div key={post.id} className="post-card">
-                  {/* Image Preview */}
-                  <div className="img-preview" style={{ flexShrink: 0, width: "340px" }}>
-                    <div className="img-preview-box">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={`/api/og?title=${encodeURIComponent(post.title)}&category=${encodeURIComponent(post.tag)}`}
-                        alt="Social graphic"
-                        style={{ width: "100%", height: "100%", objectFit: "cover", display: 'block' }}
-                      />
-                    </div>
-                  </div>
+              {visiblePosts.map(post => {
+                const platforms: string[] = Array.isArray(post.platform) ? post.platform : [];
+                const brandLabels: Record<string, string> = { hcllp: "HCLLP", blue_arrow_cpa: "Blue Arrow CPA", advisory: "Advisory" };
+                const brandLabel = brandLabels[post.brand] || post.brand;
+                const bodyText = typeof post.content_body === "string" ? post.content_body : JSON.stringify(post.content_body || "", null, 2);
+                const score = post.ai_prescore?.score ?? 0;
+                const isEditing = editingPostId === post._id;
 
+                return (
+                <div key={post._id} className="post-card">
                   {/* Content & Actions */}
                   <div style={{ flex: 1, display: "flex", flexDirection: "column", justifyContent: "space-between", minWidth: 0 }}>
                     <div>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "12px" }}>
-                        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                            <span style={{
-                              padding: "3px 10px",
-                              borderRadius: "6px",
-                              fontSize: "11px",
-                              fontWeight: 700,
-                              letterSpacing: "0.5px",
-                              textTransform: "uppercase",
-                              backgroundColor: platformColor[post.platform] + "18",
-                              color: platformColor[post.platform],
-                            }}>{post.platform}</span>
-                            <span style={{ fontSize: "12px", color: "#888" }}>{post.age}</span>
-                          </div>
-                          <h3 style={{ fontFamily: "var(--font-sans)", fontSize: "18px", fontWeight: 600, color: "#1a1a1a", margin: 0 }}>
-                            {post.title}
-                          </h3>
+                        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "8px" }}>
+                          <span style={{ padding: "3px 10px", borderRadius: "6px", fontSize: "11px", fontWeight: 700, letterSpacing: "0.5px", textTransform: "uppercase", background: "var(--surface-soft)", color: "var(--primary)" }}>{brandLabel}</span>
+                          {platforms.map(p => (
+                            <span key={p} style={{ padding: "3px 10px", borderRadius: "6px", fontSize: "11px", fontWeight: 700, backgroundColor: (platformColor[p] || "#666") + "18", color: platformColor[p] || "#666" }}>{p}</span>
+                          ))}
+                          {post.format && <span style={{ padding: "3px 10px", borderRadius: "6px", fontSize: "11px", background: "var(--surface-soft)", color: "var(--muted)" }}>{post.format}</span>}
+                          <span style={{ marginLeft: "auto", fontSize: "13px", fontWeight: 700, color: score >= 90 ? "#16a34a" : score >= 70 ? "#d97706" : "#dc2626" }}>AI Score: {score}/100</span>
                         </div>
                       </div>
 
-                      {editingPostId === post.id ? (
-                        <textarea 
-                          className="caption-box" 
+                      {isEditing ? (
+                        <textarea
+                          className="caption-box"
                           style={{ width: "100%", outline: "none", resize: "vertical", minHeight: "120px", fontFamily: "inherit" }}
                           value={editCaption}
                           onChange={(e) => setEditCaption(e.target.value)}
                         />
                       ) : (
-                        <div className="caption-box">
-                          {post.caption}
+                        <div className="caption-box" style={{ whiteSpace: "pre-wrap" }}>
+                          {bodyText}
                         </div>
                       )}
                     </div>
 
                     <div className="action-btn-group" style={{ display: "flex", gap: "10px" }}>
-                      {editingPostId === post.id ? (
+                      {isEditing ? (
                         <>
-                          <button className="action-btn approve" onClick={() => handleSaveEdit(post.id)}>
+                          <button className="action-btn approve" onClick={() => handleSaveEdit(String(post._id))}>
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                               <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline>
                             </svg>
@@ -536,7 +552,7 @@ export default function SMOWorkflowPage() {
                         </>
                       ) : (
                         <>
-                          <button className="action-btn approve" onClick={() => handleApprove(post.id)}>
+                          <button className="action-btn approve" onClick={() => handleApprove(post._id)}>
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                               <polyline points="20 6 9 17 4 12"/>
                             </svg>
@@ -548,7 +564,7 @@ export default function SMOWorkflowPage() {
                             </svg>
                             Edit
                           </button>
-                          <button className="action-btn reject" onClick={() => handleReject(post.id)}>
+                          <button className="action-btn reject" onClick={() => handleReject(post._id)}>
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                               <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
                             </svg>
@@ -559,7 +575,7 @@ export default function SMOWorkflowPage() {
                     </div>
                   </div>
                 </div>
-              ))}
+              ); })}
             </div>
           </main>
         </div>

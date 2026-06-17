@@ -141,6 +141,91 @@ def generate_content(run_id: int, trend_report: dict, brands: list = None,
                     "image_prompt": post.get("image_prompt", ""),
                     "inspiration_post_ids": json.dumps((top_post_ids or [])[:5]),
                     "status": "draft",
+                    "source_type": "competitor_intel",
+                    "calendar_event_id": None,
+                    "calendar_event_name": None,
+                })
+    return results
+
+
+def generate_calendar_posts(run_id: int, calendar_events: list, brands: list = None) -> list[dict]:
+    """Generate posts dedicated to specific calendar events, tagged as source_type='calendar_event'."""
+    if not calendar_events:
+        return []
+    if brands is None:
+        brands = list(BRAND_PROFILES.keys())
+
+    results = []
+    for event in calendar_events:
+        if isinstance(event, dict):
+            event_id = event.get("id")
+            event_name = event.get("event_name", "")
+            event_date = (event.get("event_date", "") or "")[:10]
+            event_type = event.get("event_type", "general")
+            event_notes = event.get("notes", "")
+            event_brand = event.get("brand", "all")
+            event_platforms_str = event.get("platforms", "linkedin,facebook")
+        else:
+            event_id = event.id
+            event_name = event.event_name
+            event_date = event.event_date.strftime("%Y-%m-%d") if event.event_date else ""
+            event_type = event.event_type or "general"
+            event_notes = event.notes or ""
+            event_brand = event.brand or "all"
+            event_platforms_str = event.platforms or "linkedin,facebook"
+
+        target_brands = brands if event_brand == "all" else (
+            [event_brand] if event_brand in BRAND_PROFILES else brands
+        )
+        event_platforms = [
+            p.strip() for p in event_platforms_str.split(",")
+            if p.strip() in PLATFORM_SPECS
+        ] or ["linkedin", "facebook"]
+
+        for brand_key in target_brands:
+            bp = BRAND_PROFILES.get(brand_key)
+            if not bp:
+                continue
+            for platform in event_platforms:
+                specs = PLATFORM_SPECS[platform]
+                prompt = (
+                    f"BRAND: {bp['name']}\n"
+                    f"Industry: {bp['industry']}\n"
+                    f"Services: {bp['services']}\n"
+                    f"Audience: {bp['audience']}\n"
+                    f"Tone: {bp['tone']}\n"
+                    f"DO NOT mention: {bp['avoid']}\n\n"
+                    f"PLATFORM: {platform.upper()} | Style: {specs['style']} | Max chars: {specs['max_chars']}\n\n"
+                    f"CALENDAR EVENT:\n"
+                    f"- Date: {event_date}\n"
+                    f"- Event: {event_name} [{event_type}]\n"
+                    + (f"- Context: {event_notes}\n" if event_notes else "")
+                    + "\nGenerate ONE post specifically about this upcoming event. "
+                    "Make it timely, relevant, and actionable for the audience."
+                )
+                if _client:
+                    try:
+                        post = _call_openai(prompt)
+                    except Exception as e:
+                        print(f"[Generator] Calendar OpenAI error {brand_key}/{platform}/{event_name}: {e}")
+                        post = _fallback_post(bp["name"], platform, 0)
+                else:
+                    post = _fallback_post(bp["name"], platform, 0)
+
+                results.append({
+                    "run_id": run_id,
+                    "brand": brand_key,
+                    "platform": platform,
+                    "headline": post.get("headline", ""),
+                    "content": post.get("content", ""),
+                    "cta": post.get("cta", ""),
+                    "hashtags": json.dumps(post.get("hashtags", [])),
+                    "image_prompt": post.get("image_prompt", ""),
+                    "inspiration_post_ids": "[]",
+                    "status": "draft",
+                    "source_type": "calendar_event",
+                    "calendar_event_id": event_id,
+                    "calendar_event_name": event_name,
                 })
     return results
 

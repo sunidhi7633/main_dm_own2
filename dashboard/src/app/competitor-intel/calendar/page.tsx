@@ -196,7 +196,7 @@ export default function CalendarPage() {
         ? `File loaded as context (AI parse failed).`
         : `AI filled ${filled} field(s).`);
     } catch {
-      setFileParseMsg("Could not parse file â€” check backend is running.");
+      setFileParseMsg("Could not parse file  -  check backend is running.");
     } finally {
       setFileParsing(false);
     }
@@ -206,15 +206,19 @@ export default function CalendarPage() {
     setGenerating(true);
     setGenerateMsg("");
     try {
-      const r = await fetch(`${API}/api/ci/run`, { method: "POST", headers, body: JSON.stringify({}) });
+      const r = await fetch(`${API}/api/ci/calendar/generate`, { method: "POST", headers, body: JSON.stringify({}) });
       if (r.ok) {
         const data = await r.json();
-        setGenerateMsg(`Pipeline started â€” run #${data.run_id}. Check Competitor Intel for progress.`);
+        if (data.generated === 0) {
+          setGenerateMsg(data.message || "No upcoming calendar events found in the next 30 days.");
+        } else {
+          setGenerateMsg(`Generated ${data.generated} calendar post(s) for ${data.events_processed} event(s) — run #${data.run_id}. Review them in the Review Queue.`);
+        }
       } else {
-        setGenerateMsg("Failed to start pipeline. Make sure you are logged in.");
+        setGenerateMsg("Failed to generate. Make sure you are logged in and events exist.");
       }
     } catch {
-      setGenerateMsg("Network error â€” could not reach backend.");
+      setGenerateMsg("Network error — could not reach backend.");
     } finally {
       setGenerating(false);
     }
@@ -260,7 +264,7 @@ export default function CalendarPage() {
               style={{ padding: "10px 22px", fontSize: 13, fontWeight: 700, borderRadius: 8, border: "none", cursor: generating ? "not-allowed" : "pointer", background: generating ? "#9ca3af" : "#16a34a", color: "#fff", display: "flex", alignItems: "center", gap: 8 }}
             >
               {generating
-                ? <><span style={{ width: 14, height: 14, border: "2px solid #fff", borderTopColor: "transparent", borderRadius: "50%", display: "inline-block", animation: "spin 0.8s linear infinite" }} /> Generatingâ€¦</>
+                ? <><span style={{ width: 14, height: 14, border: "2px solid #fff", borderTopColor: "transparent", borderRadius: "50%", display: "inline-block", animation: "spin 0.8s linear infinite" }} /> Generating...</>
                 : " Generate Monthly Content"}
             </button>
             {generateMsg && (
@@ -419,7 +423,7 @@ export default function CalendarPage() {
         )}
       </div>
 
-      {/* â”€â”€ Add / Edit Modal â”€â”€ */}
+      {/* -- Add / Edit Modal -- */}
       {showModal && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
           <div style={{ background: "#fff", borderRadius: 16, width: 480, maxWidth: "100%", maxHeight: "90vh", display: "flex", flexDirection: "column", boxShadow: "0 20px 60px rgba(0,0,0,0.15)" }}>
@@ -433,14 +437,14 @@ export default function CalendarPage() {
             <div style={{ overflowY: "auto", padding: "20px 28px", flex: 1 }}>
               <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
 
-                {/* File upload â€” AI auto-fill */}
+                {/* File upload  -  AI auto-fill */}
                 <div>
                   <div style={{ fontSize: 12, fontWeight: 600, color: "var(--muted)", marginBottom: 6 }}>
                     Upload Brief / File{" "}
-                    <span style={{ fontWeight: 400 }}>(optional â€” AI will extract event details)</span>
+                    <span style={{ fontWeight: 400 }}>(optional  -  AI will extract event details)</span>
                   </div>
 
-                  {/* Attached file chip â€” shown after upload */}
+                  {/* Attached file chip  -  shown after upload */}
                   {attachedFile && !fileParsing ? (
                     <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 14px", border: "1px solid var(--hairline)", borderRadius: 10, background: "#f8faff" }}>
                       {/* File icon */}
@@ -471,7 +475,7 @@ export default function CalendarPage() {
                       </button>
                     </div>
                   ) : (
-                    /* Drop zone â€” shown when no file attached */
+                    /* Drop zone  -  shown when no file attached */
                     <label
                       style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 6, padding: "16px 12px", border: "2px dashed var(--hairline)", borderRadius: 10, cursor: fileParsing ? "not-allowed" : "pointer", background: fileParsing ? "var(--surface-soft)" : "#fafafa", transition: "border-color 150ms", textAlign: "center" }}
                       onDragOver={e => { e.preventDefault(); e.currentTarget.style.borderColor = "var(--primary)"; }}
@@ -483,7 +487,7 @@ export default function CalendarPage() {
                       {fileParsing ? (
                         <>
                           <span style={{ width: 18, height: 18, border: "2px solid var(--primary)", borderTopColor: "transparent", borderRadius: "50%", display: "inline-block", animation: "spin 0.8s linear infinite" }} />
-                          <span style={{ fontSize: 12, color: "var(--muted)" }}>Parsing with AIâ€¦</span>
+                          <span style={{ fontSize: 12, color: "var(--muted)" }}>Parsing with AI...</span>
                         </>
                       ) : (
                         <>
@@ -561,7 +565,7 @@ export default function CalendarPage() {
         </div>
       )}
 
-      {/* â”€â”€ Bulk Upload Modal â”€â”€ */}
+      {/* -- Bulk Upload Modal -- */}
       {showBulk && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", zIndex: 300, display: "flex", alignItems: "center", justifyContent: "center", padding: 20 }}>
           <div style={{ background: "#fff", borderRadius: 16, padding: 28, width: 560, maxWidth: "100%", boxShadow: "0 20px 60px rgba(0,0,0,0.15)" }}>

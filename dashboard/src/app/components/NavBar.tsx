@@ -19,13 +19,13 @@ const ALL_LINKS: NavLink[] = [
   { href: "/designer-queue", label: "Designer Queue", roles: ["designer"] },
   { href: "/library", label: "DM Library", roles: ["admin", "dm_leader", "designer"] },
   { href: "/reports", label: "Reports", roles: ["admin", "dm_leader"] },
+  { href: "/review", label: "Review Queue", roles: ["admin", "dm_leader"] },
   {
     href: "/competitor-intel",
     label: "Competitor Intel",
     roles: ["admin", "dm_leader"],
     dropdown: [
       { href: "/competitor-intel", label: "Overview" },
-      { href: "/competitor-intel/generated", label: "Review Queue" },
       { href: "/competitor-intel/calendar", label: "Calendar" },
       { href: "/competitor-intel/analytics", label: "CI Analytics" },
       { href: "/competitor-intel/top-posts", label: "Top Posts" },
@@ -146,8 +146,19 @@ export default function NavBar() {
             }
 
             const active = pathname === link.href;
+            const isReview = link.href === "/review";
             return (
-              <a key={link.href} href={link.href} className={`nb-link${active ? " active" : ""}`}>
+              <a
+                key={link.href}
+                href={link.href}
+                className={`nb-link${active ? " active" : ""}`}
+                style={isReview && !active ? {
+                  background: "linear-gradient(135deg,rgba(124,58,237,0.08),rgba(13,148,136,0.08))",
+                  color: "#7c3aed",
+                  fontWeight: 600,
+                  border: "1px solid rgba(124,58,237,0.2)",
+                } : {}}
+              >
                 {link.label}
               </a>
             );

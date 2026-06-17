@@ -168,6 +168,9 @@ class CIGeneratedContent(Base):
     image_prompt = Column(Text)
     live_url = Column(String)
     status = Column(String, default="draft", index=True)
+    source_type = Column(String, default="competitor_intel", index=True)  # competitor_intel | calendar_event
+    calendar_event_id = Column(Integer, nullable=True)
+    calendar_event_name = Column(String, nullable=True)
     rejection_reason = Column(Text)
     scheduled_at = Column(DateTime(timezone=True))
     published_at = Column(DateTime(timezone=True))

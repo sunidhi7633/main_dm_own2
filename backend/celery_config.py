@@ -201,12 +201,20 @@ def run_ci_pipeline(run_id: int, brands: list = None):
 
         # Steps 6 & 7 — Generate content
         _log(run, "Steps 6-7: Generating branded content with OpenAI...")
-        from agents.competitor_intel.generator import generate_content
+        from agents.competitor_intel.generator import generate_content, generate_calendar_posts
         top_ids = [p.id for p in top_posts]
+
+        # Competitor-intel posts (tagged source_type="competitor_intel")
         generated_dicts = generate_content(
             run_id, trend_data, brands=brands,
             top_post_ids=top_ids, calendar_events=upcoming_events
         )
+
+        # Dedicated calendar event posts (tagged source_type="calendar_event")
+        if upcoming_events:
+            cal_dicts = generate_calendar_posts(run_id, upcoming_events, brands=brands)
+            generated_dicts += cal_dicts
+            _log(run, f"  + {len(cal_dicts)} calendar-event posts generated.")
 
         generated_rows = []
         for gd in generated_dicts:

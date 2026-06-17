@@ -113,6 +113,8 @@ def _sg(g) -> dict:
         "quality_originality_score": g.quality_originality_score,
         "quality_readability_score": g.quality_readability_score,
         "status": g.status,
+        "source_type": getattr(g, "source_type", None) or "competitor_intel",
+        "calendar_event_name": getattr(g, "calendar_event_name", None) or "",
         "rejection_reason": g.rejection_reason or "",
         "live_url": g.live_url or "",
         "scheduled_at": g.scheduled_at.isoformat() if g.scheduled_at else None,
@@ -297,6 +299,7 @@ def trend_report(run_id: Optional[int] = None, db: Session = Depends(get_db),
 @router.get("/api/ci/generated")
 def list_generated(run_id: Optional[int] = None, brand: Optional[str] = None,
                    platform: Optional[str] = None, status: Optional[str] = None,
+                   source_type: Optional[str] = None,
                    limit: int = 30, offset: int = 0, db: Session = Depends(get_db),
                    current_user: CurrentUser = Depends(get_current_user)):
     check_permission(current_user, "analytics:read")
@@ -309,9 +312,10 @@ def list_generated(run_id: Optional[int] = None, brand: Optional[str] = None,
         run_id = latest.id
 
     q = db.query(models.CIGeneratedContent).filter(models.CIGeneratedContent.run_id == run_id)
-    if brand:    q = q.filter(models.CIGeneratedContent.brand == brand)
-    if platform: q = q.filter(models.CIGeneratedContent.platform == platform)
-    if status:   q = q.filter(models.CIGeneratedContent.status == status)
+    if brand:       q = q.filter(models.CIGeneratedContent.brand == brand)
+    if platform:    q = q.filter(models.CIGeneratedContent.platform == platform)
+    if status:      q = q.filter(models.CIGeneratedContent.status == status)
+    if source_type: q = q.filter(models.CIGeneratedContent.source_type == source_type)
     return [_sg(g) for g in q.order_by(models.CIGeneratedContent.id).offset(offset).limit(limit).all()]
 
 
@@ -492,6 +496,72 @@ def delete_calendar_event(eid: int, db: Session = Depends(get_db),
         raise HTTPException(404, "Event not found")
     ev.is_active = 0; db.commit()
     return {"status": "deleted"}
+
+
+# ── Calendar Post Manual Generation ──────────────────────────────────────────
+
+class CalendarGenerateRequest(BaseModel):
+    brands: Optional[list] = None        # None = all brands
+    event_ids: Optional[list] = None     # None = all upcoming events (next 30 days)
+
+
+@router.post("/api/ci/calendar/generate")
+def generate_calendar_posts_manual(
+    body: CalendarGenerateRequest = Body(CalendarGenerateRequest()),
+    db: Session = Depends(get_db),
+    current_user: CurrentUser = Depends(get_current_user),
+):
+    check_permission(current_user, "smo:trigger")
+
+    from datetime import timedelta, timezone
+    now = datetime.now(timezone.utc)
+
+    run = models.CIPipelineRun(
+        triggered_by=current_user.username,
+        status="running",
+        step="calendar_generate",
+    )
+    db.add(run); db.commit(); db.refresh(run)
+    run_id = run.id
+
+    try:
+        q = db.query(models.CICalendarEvent).filter(
+            models.CICalendarEvent.is_active == 1,
+            models.CICalendarEvent.event_date >= now,
+            models.CICalendarEvent.event_date <= now + timedelta(days=30),
+        )
+        if body.event_ids:
+            q = q.filter(models.CICalendarEvent.id.in_(body.event_ids))
+        events = q.order_by(models.CICalendarEvent.event_date).all()
+
+        if not events:
+            run.status = "completed"
+            run.step = "no_events"
+            db.commit()
+            return {"run_id": run_id, "generated": 0, "message": "No upcoming calendar events found in the next 30 days"}
+
+        from agents.competitor_intel.generator import generate_calendar_posts
+        generated_dicts = generate_calendar_posts(run_id, events, brands=body.brands)
+
+        for gd in generated_dicts:
+            db.add(models.CIGeneratedContent(**gd))
+        db.commit()
+
+        run.status = "completed"
+        run.content_generated = len(generated_dicts)
+        run.step = "calendar_generate_done"
+        db.commit()
+
+        return {
+            "run_id": run_id,
+            "generated": len(generated_dicts),
+            "events_processed": len(events),
+        }
+    except Exception as e:
+        run.status = "failed"
+        run.logs = str(e)
+        db.commit()
+        raise HTTPException(500, f"Calendar post generation failed: {e}")
 
 
 # ── File Parse (AI-assisted event extraction) ─────────────────────────────────
