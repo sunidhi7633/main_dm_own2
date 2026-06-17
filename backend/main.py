@@ -68,7 +68,6 @@ async def lifespan(app: FastAPI):
             mongo_db.report_recipients.insert_one({
                 "name": "Sanwar Harshwal",
                 "email": "sanwar@harshwal.com",
-                "whatsapp": "+919999999999",
                 "role": "CEO",
                 "active": True,
                 "added_by": "system",
@@ -575,6 +574,19 @@ async def run_agents(background_tasks: BackgroundTasks):
     import agents.pipeline
     if agents.pipeline.is_pipeline_running:
         return {"status": "already_running"}
-    # Pass the coroutine function directly — FastAPI BackgroundTasks handles async
     background_tasks.add_task(run_intelligence_pipeline)
+    return {"status": "started"}
+
+@app.post("/api/smo/run")
+async def run_smo_manual(background_tasks: BackgroundTasks):
+    def _run():
+        from dotenv import load_dotenv
+        load_dotenv()
+        import importlib
+        import agents.smo_agent, agents.prescore_agent
+        importlib.reload(agents.smo_agent)
+        importlib.reload(agents.prescore_agent)
+        agents.smo_agent.generate_weekly_briefs()
+        agents.prescore_agent.run_prescore_batch()
+    background_tasks.add_task(_run)
     return {"status": "started"}

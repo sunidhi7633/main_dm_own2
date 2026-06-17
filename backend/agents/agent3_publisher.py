@@ -7,7 +7,6 @@ from bson import ObjectId
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from mongo import db
-from notifications.whatsapp import send_engagement_velocity_whatsapp
 
 
 # ---------------------------------------------------------------------------
@@ -349,18 +348,5 @@ def publish_content(content_id: str):
     # Blog cascade generation
     if format_val.lower() == "blog":
         generate_cascade_posts(item)
-
-    # WhatsApp engagement velocity alert — send after 60s so the post has settled
-    if primary_url:
-        post_title = (item.get("caption") or item.get("content_body", ""))[:60]
-        platform_str = ", ".join(platforms)
-
-        def _delayed_alert():
-            import time
-            time.sleep(60)
-            send_engagement_velocity_whatsapp(post_title, brand, platform_str, primary_url)
-
-        threading.Thread(target=_delayed_alert, daemon=True).start()
-        print("WhatsApp velocity alert scheduled (60s delay).")
 
     return primary_url

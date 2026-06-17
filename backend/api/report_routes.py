@@ -60,11 +60,6 @@ class ShareLinkRequest(BaseModel):
     expires_hours: int = 48
 
 
-class ShareWhatsappRequest(BaseModel):
-    report_id: str
-    to_phones: List[str]
-
-
 # ---------------------------------------------------------------------------
 # Report HTML builder — pulls real data from MongoDB
 # ---------------------------------------------------------------------------
@@ -319,13 +314,6 @@ async def share_via_email(req: ShareEmailRequest, current_user: CurrentUser = De
         "shared_at":  datetime.utcnow().isoformat(),
     })
 
-    from notifications.whatsapp import send_report_shared_alert
-    period = (
-        f"{report.get('date_from', '')} - {report.get('date_to', '')}"
-        if report.get("date_from") else "Latest"
-    )
-    send_report_shared_alert(report.get("type", "Custom"), period, len(req.to_emails))
-
     return {"status": "sent", "recipients": len(req.to_emails)}
 
 
@@ -352,47 +340,6 @@ async def generate_share_link(req: ShareLinkRequest, current_user: CurrentUser =
     return {"url": share_url, "expires_at": expires_at.isoformat()}
 
 
-@router.post("/api/reports/share/whatsapp")
-async def share_via_whatsapp(req: ShareWhatsappRequest, current_user: CurrentUser = Depends(get_current_user)):
-    check_permission(current_user, "analytics:read")
-
-    # Generate a 48h share link first
-    token      = secrets.token_urlsafe(32)
-    expires_at = datetime.utcnow() + timedelta(hours=48)
-
-    db.report_shares.insert_one({
-        "token":          token,
-        "report_id":      req.report_id,
-        "method":         "whatsapp",
-        "created_by":     current_user.id,
-        "created_at":     datetime.utcnow().isoformat(),
-        "expires_at":     expires_at.isoformat(),
-        "accessed_count": 0,
-    })
-
-    base_url  = os.getenv("NEXT_PUBLIC_API_URL", "http://localhost:3000")
-    share_url = f"{base_url}/report/{token}"
-
-    try:
-        report = db.reports.find_one({"_id": ObjectId(req.report_id)})
-    except Exception:
-        report = None
-    report_type = (report.get("type", "Report") if report else "Report").capitalize()
-
-    from notifications.whatsapp import _send
-    sent = 0
-    for phone in req.to_phones:
-        msg = (
-            f"📊 *Harshwal {report_type} Report*\n\n"
-            f"Shared by {current_user.id}. View the report here:\n{share_url}\n\n"
-            f"_Valid for 48 hours. No login required._"
-        )
-        _send(phone, msg)
-        sent += 1
-
-    return {"status": "sent", "recipients": sent, "url": share_url}
-
-
 @router.get("/report/{token}")
 async def view_shared_report(token: str):
     """PUBLIC ENDPOINT — no authentication required."""
@@ -416,12 +363,6 @@ async def view_shared_report(token: str):
 
     if not report:
         raise HTTPException(404, "Report content not found")
-
-    # Use the share creator's username rather than generic "Stakeholder"
-    opener_name = share.get("created_by", "Stakeholder")
-
-    from notifications.whatsapp import send_report_opened_alert
-    send_report_opened_alert(opener_name, report.get("type", "Custom"), datetime.utcnow().isoformat()[:10])
 
     html = f"""
     <html>

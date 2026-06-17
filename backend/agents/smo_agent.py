@@ -6,7 +6,6 @@ import random
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from mongo import db
-from notifications.whatsapp import send_batch_ready_alert
 
 try:
     from langchain_openai import ChatOpenAI
@@ -224,12 +223,6 @@ def generate_weekly_briefs(brand: str = None):
     if all_content:
         db.content_library.insert_many(all_content)
         print(f"Saved {len(all_content)} content items to content_library (status: pending_prescore).")
-
-    # WhatsApp alert to DM Leader
-    hcllp_count  = sum(1 for c in all_content if c["brand"] == "hcllp")
-    ba_count     = sum(1 for c in all_content if c["brand"] == "blue_arrow_cpa")
-    adv_count    = sum(1 for c in all_content if c["brand"] == "advisory")
-    send_batch_ready_alert(len(all_content), hcllp_count, ba_count, adv_count)
 
     print(f"Agent 1 + Agent 2 complete. {len(all_briefs)} briefs, {len(all_content)} content items queued for prescore.")
 

@@ -42,14 +42,12 @@ export default function ShareReports() {
 
   // Share modal
   const [shareModal, setShareModal] = useState<any>(null);
-  const [shareTab, setShareTab] = useState<"email" | "whatsapp" | "link">("email");
+  const [shareTab, setShareTab] = useState<"email" | "link">("email");
   const [toEmails, setToEmails] = useState("");
   const [personalNote, setPersonalNote] = useState("");
-  const [toPhones, setToPhones] = useState("");
   const [shareLink, setShareLink] = useState("");
   const [linkExpiresAt, setLinkExpiresAt] = useState<Date | null>(null);
   const [sendingEmail, setSendingEmail] = useState(false);
-  const [sendingWhatsapp, setSendingWhatsapp] = useState(false);
   const [generatingLink, setGeneratingLink] = useState(false);
 
   const countdown = useCountdown(linkExpiresAt);
@@ -103,23 +101,6 @@ export default function ShareReports() {
     setPersonalNote("");
     const defaultEmails = recipients.map(r => r.email).join(", ");
     setToEmails(defaultEmails);
-    setToPhones("");
-  };
-
-  const handleShareWhatsapp = async () => {
-    setSendingWhatsapp(true);
-    const token = localStorage.getItem("access_token");
-    const phones = toPhones.split(",").map(p => p.trim()).filter(Boolean);
-    try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/reports/share/whatsapp`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ report_id: shareModal._id, to_phones: phones }),
-      });
-      if (res.ok) { toast.success("WhatsApp message sent!"); setShareModal(null); }
-      else toast.error("Failed to send WhatsApp message.");
-    } catch (e) { console.error(e); }
-    finally { setSendingWhatsapp(false); }
   };
 
   const handleShareEmail = async () => {
@@ -166,7 +147,7 @@ export default function ShareReports() {
     const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/settings/recipients`, {
       method: "POST",
       headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ name: newName, email: newEmail, whatsapp: newPhone, role: newRole }),
+      body: JSON.stringify({ name: newName, email: newEmail, role: newRole }),
     });
     if (res.ok) {
       toast.success("Recipient added.");
@@ -317,7 +298,6 @@ export default function ShareReports() {
               <form onSubmit={handleAddRecipient} style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
                 <input required className="input-field" type="text" placeholder="Full name" value={newName} onChange={e => setNewName(e.target.value)} />
                 <input required className="input-field" type="email" placeholder="Email address" value={newEmail} onChange={e => setNewEmail(e.target.value)} />
-                <input className="input-field" type="text" placeholder="WhatsApp (optional)" value={newPhone} onChange={e => setNewPhone(e.target.value)} />
                 <select className="input-field" value={newRole} onChange={e => setNewRole(e.target.value)}>
                   <option value="CEO">CEO</option>
                   <option value="Partner">Partner</option>
@@ -347,10 +327,9 @@ export default function ShareReports() {
               {/* Tabs */}
               <div style={{ display: "flex", gap: "0", borderBottom: "2px solid var(--hairline)" }}>
                 {([
-                  { id: "email",    label: "📧 Email" },
-                  { id: "whatsapp", label: "💬 WhatsApp" },
-                  { id: "link",     label: "🔗 Link" },
-                ] as { id: "email" | "whatsapp" | "link"; label: string }[]).map(tab => (
+                  { id: "email", label: "📧 Email" },
+                  { id: "link",  label: "🔗 Link" },
+                ] as { id: "email" | "link"; label: string }[]).map(tab => (
                   <button
                     key={tab.id}
                     onClick={() => setShareTab(tab.id)}
@@ -375,43 +354,7 @@ export default function ShareReports() {
 
             {/* Tab content */}
             <div style={{ padding: "24px 32px 28px" }}>
-              {shareTab === "whatsapp" ? (
-                <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
-                  <div>
-                    <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: "var(--muted)", marginBottom: "6px", textTransform: "uppercase", letterSpacing: "0.5px" }}>Phone Numbers</label>
-                    <input
-                      type="text"
-                      className="input-field"
-                      value={toPhones}
-                      onChange={e => setToPhones(e.target.value)}
-                      placeholder="+919876543210, +919999999999"
-                    />
-                    {recipients.filter(r => r.whatsapp).length > 0 && (
-                      <div style={{ marginTop: "8px", display: "flex", gap: "6px", flexWrap: "wrap" }}>
-                        {recipients.filter(r => r.whatsapp).map(r => (
-                          <button
-                            key={r._id}
-                            type="button"
-                            onClick={() => {
-                              const phones = toPhones.split(",").map((p: string) => p.trim()).filter(Boolean);
-                              if (!phones.includes(r.whatsapp)) setToPhones([...phones, r.whatsapp].join(", "));
-                            }}
-                            style={{ fontSize: "11px", padding: "3px 10px", background: "var(--surface-soft)", border: "1px solid var(--hairline)", borderRadius: "20px", cursor: "pointer", color: "var(--ink)" }}
-                          >
-                            + {r.name}
-                          </button>
-                        ))}
-                      </div>
-                    )}
-                    <p style={{ fontSize: "12px", color: "var(--muted)", marginTop: "8px", lineHeight: 1.5 }}>
-                      A secure 48-hour link will be generated and sent via WhatsApp Business API.
-                    </p>
-                  </div>
-                  <button onClick={handleShareWhatsapp} disabled={sendingWhatsapp || !toPhones.trim()} className="btn-primary" style={{ width: "100%", marginTop: "4px" }}>
-                    {sendingWhatsapp ? "Sending…" : "Send via WhatsApp"}
-                  </button>
-                </div>
-              ) : shareTab === "email" ? (
+              {shareTab === "email" ? (
                 <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
                   <div>
                     <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: "var(--muted)", marginBottom: "6px", textTransform: "uppercase", letterSpacing: "0.5px" }}>To</label>

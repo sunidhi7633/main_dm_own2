@@ -3,6 +3,8 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useToast } from "../components/ToastProvider";
 
+const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001";
+
 const brands = [
   {
     id: "harshwal",
@@ -118,7 +120,7 @@ export default function BrandVoicePage() {
     setGenerated(null);
 
     try {
-      const res = await fetch("http://localhost:8000/api/brand-voice/generate", {
+      const res = await fetch("${API}/api/brand-voice/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -159,7 +161,7 @@ export default function BrandVoicePage() {
   const sendToSMO = async () => {
     if (!generated) return;
     try {
-      const res = await fetch("http://localhost:8000/api/smo/posts", {
+      const res = await fetch("${API}/api/smo/posts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

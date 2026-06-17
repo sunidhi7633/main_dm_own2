@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react';
 
+const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001";
+
 type AgentStatus = { is_running: boolean; last_run: string; logs: string[] };
 
 const quickActions = [
@@ -12,14 +14,14 @@ const quickActions = [
 
 export default function Home() {
   const [status, setStatus] = useState<AgentStatus>({ is_running: false, last_run: "Never", logs: [] });
-  const [time, setTime] = useState(new Date());
+  const [time, setTime] = useState<Date | null>(null);
   const [dashboardStats, setDashboardStats] = useState<any>(null);
   const [smoQueue, setSmoQueue] = useState<any[]>([]);
   const [runError, setRunError] = useState<string | null>(null);
 
   const fetchStatus = async () => {
     try {
-      const res = await fetch('http://localhost:8000/api/status');
+      const res = await fetch('${API}/api/status');
       if (res.ok) setStatus(await res.json());
     } catch { /* backend offline */ }
   };
@@ -27,8 +29,8 @@ export default function Home() {
   const fetchDashboardData = async () => {
     try {
       const [resStats, resSmo] = await Promise.all([
-        fetch('http://localhost:8000/api/dashboard/stats'),
-        fetch('http://localhost:8000/api/smo/posts')
+        fetch('${API}/api/dashboard/stats'),
+        fetch('${API}/api/smo/posts')
       ]);
       if (resStats.ok) setDashboardStats(await resStats.json());
       if (resSmo.ok) setSmoQueue(await resSmo.json());
@@ -38,7 +40,7 @@ export default function Home() {
   const runPipeline = async () => {
     setRunError(null);
     try {
-      const res = await fetch('http://localhost:8000/api/agents/run', { method: 'POST' });
+      const res = await fetch(`${API}/api/agents/run`, { method: 'POST' });
       if (!res.ok) { setRunError(`Server error: ${res.status}`); return; }
       const data = await res.json();
       if (data.status === "already_running") { setRunError("Pipeline is already running."); return; }
@@ -52,11 +54,12 @@ export default function Home() {
     fetchStatus();
     fetchDashboardData();
     const statusId = setInterval(fetchStatus, 3000);
+    setTime(new Date());
     const clockId = setInterval(() => setTime(new Date()), 1000);
     return () => { clearInterval(statusId); clearInterval(clockId); };
   }, []);
 
-  const greeting = time.getHours() < 12 ? "Good morning" : time.getHours() < 17 ? "Good afternoon" : "Good evening";
+  const greeting = !time ? "Good morning" : time.getHours() < 12 ? "Good morning" : time.getHours() < 17 ? "Good afternoon" : "Good evening";
 
   return (
     <div style={{ backgroundColor: "var(--canvas)", minHeight: "calc(100vh - 60px)" }}>
@@ -105,7 +108,7 @@ export default function Home() {
           <div className="home-greeting-row" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "40px" }}>
             <div>
               <p style={{ fontSize: "13px", fontWeight: 500, color: "var(--on-dark-soft)", marginBottom: "8px", letterSpacing: "0.3px" }}>
-                {greeting}, Admin · {time.toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" })}
+                {greeting}, Admin · {time ? time.toLocaleDateString("en-IN", { weekday: "long", day: "numeric", month: "long" }) : ""}
               </p>
               <h1 className="home-hero-title" style={{
                 fontFamily: "var(--font-serif)",
@@ -126,7 +129,7 @@ export default function Home() {
               color: "var(--on-dark-soft)",
             }}>
               <div style={{ fontSize: "32px", letterSpacing: "2px", color: "var(--on-dark)", fontWeight: 400 }}>
-                {time.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true })}
+                {time ? time.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true }) : "--:--"}
               </div>
               <div style={{ fontSize: "12px", marginTop: "4px" }}>IST</div>
             </div>

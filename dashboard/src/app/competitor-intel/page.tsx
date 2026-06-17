@@ -1,7 +1,7 @@
-"use client";
+﻿"use client";
 import { useEffect, useRef, useState } from "react";
 
-const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001";
 
 type Run = {
   id: number; triggered_by: string; status: string; step: string;
@@ -214,7 +214,7 @@ export default function CompetitorIntelPage() {
 
           {activeRun.step && activeRun.status === "running" && (
             <div style={{ marginTop: 8, fontSize: 11, color: "#3b82f6", fontWeight: 500 }}>
-              ↳ {activeRun.step}
+              â†³ {activeRun.step}
             </div>
           )}
 
@@ -222,7 +222,7 @@ export default function CompetitorIntelPage() {
             <div style={{ marginTop: 12, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               {activeRun.status === "completed" && (
                 <a href="/competitor-intel/generated" style={{ fontSize: 12, color: "var(--primary)", fontWeight: 600, textDecoration: "none" }}>
-                  Review content →
+                  Review content â†’
                 </a>
               )}
               <button onClick={dismissActiveRun} style={{ fontSize: 12, color: "var(--muted)", background: "none", border: "none", cursor: "pointer", marginLeft: "auto" }}>
@@ -265,10 +265,10 @@ export default function CompetitorIntelPage() {
         {/* Stat cards */}
         <div className="ci-stats" style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 16, marginBottom: 28 }}>
           {[
-            { label: "Competitors Monitored", value: stats?.total_competitors ?? 0, icon: "👥" },
-            { label: "Pipeline Runs", value: stats?.total_runs ?? 0, icon: "⚙️" },
-            { label: "Pending Review", value: stats?.pending_review ?? 0, icon: "📝", link: "/competitor-intel/generated" },
-            { label: "Approved Posts", value: stats?.approved ?? 0, icon: "✅" },
+            { label: "Competitors Monitored", value: stats?.total_competitors ?? 0, icon: "" },
+            { label: "Pipeline Runs", value: stats?.total_runs ?? 0, icon: "" },
+            { label: "Pending Review", value: stats?.pending_review ?? 0, icon: "", link: "/competitor-intel/generated" },
+            { label: "Approved Posts", value: stats?.approved ?? 0, icon: "" },
           ].map(s => (
             <div key={s.label} className="ci-stat" style={{ cursor: s.link ? "pointer" : "default" }}
               onClick={() => s.link && (window.location.href = s.link)}>
@@ -281,7 +281,7 @@ export default function CompetitorIntelPage() {
 
         <div className="ci-main" style={{ display: "grid", gridTemplateColumns: "1fr 360px", gap: 20 }}>
 
-          {/* Left — latest run + history */}
+          {/* Left â€” latest run + history */}
           <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
 
             {/* Latest run */}
@@ -290,8 +290,8 @@ export default function CompetitorIntelPage() {
                 <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
                   <div style={{ fontSize: 15, fontWeight: 600, color: "var(--ink)" }}>Latest Pipeline Run</div>
                   <div style={{ display: "flex", gap: 8 }}>
-                    <a href="/competitor-intel/top-posts" style={{ fontSize: 12, color: "var(--primary)", textDecoration: "none", fontWeight: 500 }}>Top Posts →</a>
-                    <a href="/competitor-intel/generated" style={{ fontSize: 12, color: "var(--primary)", textDecoration: "none", fontWeight: 500 }}>Review Content →</a>
+                    <a href="/competitor-intel/top-posts" style={{ fontSize: 12, color: "var(--primary)", textDecoration: "none", fontWeight: 500 }}>Top Posts â†’</a>
+                    <a href="/competitor-intel/generated" style={{ fontSize: 12, color: "var(--primary)", textDecoration: "none", fontWeight: 500 }}>Review Content â†’</a>
                   </div>
                 </div>
                 <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 12 }}>
@@ -321,7 +321,7 @@ export default function CompetitorIntelPage() {
                 <StepBar run={latestRun} />
                 {latestRun.step && latestRun.status === "running" && (
                   <div style={{ marginTop: 12, fontSize: 12, color: "#3b82f6", fontWeight: 500 }}>
-                    ↳ {latestRun.step}
+                    â†³ {latestRun.step}
                   </div>
                 )}
               </div>
@@ -329,7 +329,7 @@ export default function CompetitorIntelPage() {
 
             {!latestRun && (
               <div className="ci-card" style={{ textAlign: "center", padding: 48 }}>
-                <div style={{ fontSize: 40, marginBottom: 16 }}>🚀</div>
+                <div style={{ fontSize: 40, marginBottom: 16 }}></div>
                 <div style={{ fontSize: 18, fontWeight: 600, color: "var(--ink)", marginBottom: 8 }}>No runs yet</div>
                 <div style={{ fontSize: 14, color: "var(--muted)", marginBottom: 24 }}>Click "Run Analysis Now" to start your first competitor intelligence pipeline.</div>
                 <button onClick={triggerRun} disabled={running} style={{ padding: "10px 24px", borderRadius: 8, border: "none", background: "var(--primary)", color: "#fff", fontSize: 14, fontWeight: 600, cursor: "pointer" }}>
@@ -377,10 +377,10 @@ export default function CompetitorIntelPage() {
             <div className="ci-card">
               <div style={{ fontSize: 15, fontWeight: 600, color: "var(--ink)", marginBottom: 16 }}>Quick Access</div>
               {[
-                { href: "/competitor-intel/competitors", icon: "👥", label: "Competitor List", sub: "Add / manage competitors" },
-                { href: "/competitor-intel/top-posts", icon: "🏆", label: "Top Posts", sub: "Highest-performing content" },
-                { href: "/competitor-intel/generated", icon: "✍️", label: "Review Queue", sub: "Approve or reject generated posts" },
-                { href: "/competitor-intel/calendar", icon: "📅", label: "Content Calendar", sub: "Monthly events for AI content" },
+                { href: "/competitor-intel/competitors", icon: "", label: "Competitor List", sub: "Add / manage competitors" },
+                { href: "/competitor-intel/top-posts", icon: "", label: "Top Posts", sub: "Highest-performing content" },
+                { href: "/competitor-intel/generated", icon: "", label: "Review Queue", sub: "Approve or reject generated posts" },
+                { href: "/competitor-intel/calendar", icon: "", label: "Content Calendar", sub: "Monthly events for AI content" },
               ].map(l => (
                 <a key={l.href} href={l.href} style={{ display: "flex", alignItems: "center", gap: 14, padding: "12px 14px", borderRadius: 10, textDecoration: "none", marginBottom: 6, transition: "background 150ms", background: "var(--surface-soft)" }}
                   onMouseEnter={e => (e.currentTarget.style.background = "#f0ebe5")}
@@ -418,7 +418,7 @@ export default function CompetitorIntelPage() {
 
               <div style={{ display: "flex", gap: 8, marginBottom: 16 }}>
                 <div style={{ flex: 1 }}>
-                  <label style={{ fontSize: 11, color: "var(--muted)", display: "block", marginBottom: 4 }}>Hour (0–23)</label>
+                  <label style={{ fontSize: 11, color: "var(--muted)", display: "block", marginBottom: 4 }}>Hour (0â€“23)</label>
                   <input type="number" min={0} max={23} value={schedule.cron_hour}
                     onChange={e => setSchedule(s => ({ ...s, cron_hour: +e.target.value }))}
                     style={{ width: "100%", padding: "7px 10px", borderRadius: 8, border: "1px solid var(--hairline)", fontSize: 14, fontFamily: "var(--font-sans)" }} />

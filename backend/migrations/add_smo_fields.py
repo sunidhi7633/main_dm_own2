@@ -17,7 +17,7 @@ result = db.content_library.update_many(
         "smo_generated": False,               # True = came from Agent 1/2
         "designer_approved": False,           # Blue Arrow gate flag
         "ai_prescore": None,                  # {score, brand_voice, faq_verified, ...}
-        "engagement_velocity_sent": False,    # 60-min WhatsApp fired?
+        "engagement_velocity_sent": False,    # 60-min post-publish alert fired?
         "live_url": None,                     # Populated by Agent 3 after publish
         "rejection_reason": None,             # DM Leader rejection text
         "cascade_parent_id": None,            # Blog ID if this is a cascade post

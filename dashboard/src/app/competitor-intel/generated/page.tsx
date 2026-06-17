@@ -1,7 +1,7 @@
-"use client";
+﻿"use client";
 import { useEffect, useState } from "react";
 
-const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001";
 const PAGE_SIZE = 30;
 
 type Post = {
@@ -181,7 +181,7 @@ export default function GeneratedPage() {
               <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
                 {posts.length === 0 ? (
                   <div style={{ textAlign: "center", padding: 80, color: "var(--muted)" }}>
-                    <div style={{ fontSize: 36, marginBottom: 16 }}>✍️</div>
+                    <div style={{ fontSize: 36, marginBottom: 16 }}></div>
                     <div style={{ fontSize: 16, fontWeight: 600, color: "var(--ink)", marginBottom: 8 }}>No posts to review</div>
                     <div style={{ fontSize: 14 }}>Run a pipeline to generate content for review.</div>
                   </div>
@@ -217,11 +217,11 @@ export default function GeneratedPage() {
                 {posts.length > 0 && (
                   <div style={{ display: "flex", alignItems: "center", gap: 10, marginTop: 12, justifyContent: "center" }}>
                     <button className="pager-btn" disabled={!hasPrev} onClick={() => setPage(p => p - 1)} style={{ background: "#fff" }}>
-                      ← Prev
+                      â† Prev
                     </button>
                     <span style={{ fontSize: 13, color: "var(--muted)", minWidth: 60, textAlign: "center" }}>Page {page}</span>
                     <button className="pager-btn" disabled={!hasNext} onClick={() => setPage(p => p + 1)} style={{ background: "#fff" }}>
-                      Next →
+                      Next â†’
                     </button>
                   </div>
                 )}
@@ -295,16 +295,16 @@ export default function GeneratedPage() {
                       <div style={{ marginTop: 20, display: "flex", flexDirection: "column", gap: 8 }}>
                         <button className="action-btn" onClick={() => { setAction("approve"); submitAction(); }}
                           style={{ background: "#22c55e", color: "#fff" }} disabled={saving}>
-                          {saving && action === "approve" ? "Approving..." : "✓ Approve"}
+                          {saving && action === "approve" ? "Approving..." : " Approve"}
                         </button>
                         <div style={{ display: "flex", gap: 8 }}>
                           <button className="action-btn" onClick={() => setAction(action === "schedule" ? null : "schedule")}
                             style={{ background: action === "schedule" ? "#b45309" : "#fef3c7", color: action === "schedule" ? "#fff" : "#b45309", flex: 1 }}>
-                            🗓 Schedule
+                             Schedule
                           </button>
                           <button className="action-btn" onClick={() => setAction(action === "reject" ? null : "reject")}
                             style={{ background: action === "reject" ? "#ef4444" : "#fee2e2", color: action === "reject" ? "#fff" : "#ef4444", flex: 1 }}>
-                            ✕ Reject
+                             Reject
                           </button>
                         </div>
                         {(action === "reject" || action === "schedule") && (

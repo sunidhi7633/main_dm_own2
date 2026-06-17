@@ -4,7 +4,6 @@ from datetime import datetime, timedelta
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from mongo import db
-from notifications.whatsapp import send_72h_timeout_alert
 
 def check_72h_timeout():
     """
@@ -35,9 +34,4 @@ def check_72h_timeout():
     if scheduled_at:
         hours_until_publish = int((scheduled_at - datetime.utcnow()).total_seconds() / 3600)
         
-    send_72h_timeout_alert(
-        item_count=len(stale_items),
-        oldest_item_hours=oldest_hours,
-        hours_until_publish=hours_until_publish
-    )
-    print(f"Sent 72h timeout alert for {len(stale_items)} items.")
+    print(f"72h timeout: {len(stale_items)} items stale, oldest={oldest_hours}h, hours_until_publish={hours_until_publish}h.")

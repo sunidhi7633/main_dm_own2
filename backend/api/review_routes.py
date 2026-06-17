@@ -11,7 +11,6 @@ from auth.roles import ROLES
 from mongo import db
 from bson import ObjectId
 import celery_config
-from notifications.whatsapp import notify_designer_visual_queue
 
 router = APIRouter()
 
@@ -185,10 +184,6 @@ def designer_approve(content_id: str, request: DesignerApproveRequest, current_u
         {"_id": obj_id},
         {"$set": update_data}
     )
-    
-    # Send WhatsApp to DM Leader
-    item["designer_approved"] = True
-    notify_designer_visual_queue(item)
     
     return {"status": "ok"}
 

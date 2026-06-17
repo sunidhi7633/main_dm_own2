@@ -1,7 +1,7 @@
-"use client";
+﻿"use client";
 import { useEffect, useState } from "react";
 
-const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001";
 const PLATFORMS = ["linkedin", "facebook", "instagram", "twitter", "youtube"];
 
 type Competitor = {
@@ -74,10 +74,10 @@ export default function CompetitorsPage() {
     } finally { setSaving(false); }
   };
 
-  const deactivate = async (id: number) => {
+  const toggleActive = async (id: number) => {
     setDeleting(id);
     try {
-      await fetch(`${API}/api/ci/competitors/${id}`, { method: "DELETE", headers: h() });
+      await fetch(`${API}/api/ci/competitors/${id}/toggle`, { method: "POST", headers: h() });
       fetchCompetitors();
     } finally { setDeleting(null); }
   };
@@ -113,7 +113,7 @@ export default function CompetitorsPage() {
         <div className="ci-header-row" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 28 }}>
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4 }}>
-              <a href="/competitor-intel" style={{ fontSize: 13, color: "var(--muted)", textDecoration: "none" }}>← Competitor Intel</a>
+              <a href="/competitor-intel" style={{ fontSize: 13, color: "var(--muted)", textDecoration: "none" }}>â† Competitor Intel</a>
             </div>
             <h1 style={{ fontSize: 24, fontWeight: 700, color: "var(--ink)", margin: 0 }}>Competitors</h1>
             <p style={{ fontSize: 13, color: "var(--muted)", margin: "4px 0 0" }}>
@@ -176,7 +176,7 @@ export default function CompetitorsPage() {
                           <span style={{ fontSize: 11, color: "var(--muted)", fontWeight: 400 }}>posts</span>
                         </span>
                       ) : (
-                        <span style={{ fontSize: 12, color: "var(--muted)" }}>—</span>
+                        <span style={{ fontSize: 12, color: "var(--muted)" }}>â€”</span>
                       )}
                     </td>
                     <td style={{ padding: "14px 16px" }}>
@@ -193,11 +193,17 @@ export default function CompetitorsPage() {
                         <button onClick={() => openEdit(c)} style={{ padding: "5px 12px", borderRadius: 6, border: "1px solid var(--hairline)", background: "#fff", fontSize: 12, color: "var(--ink)", cursor: "pointer", fontFamily: "var(--font-sans)" }}>
                           Edit
                         </button>
-                        {c.is_active === 1 && (
-                          <button onClick={() => deactivate(c.id)} disabled={deleting === c.id} style={{ padding: "5px 12px", borderRadius: 6, border: "1px solid #fee2e2", background: "#fff", fontSize: 12, color: "#ef4444", cursor: "pointer", fontFamily: "var(--font-sans)" }}>
-                            {deleting === c.id ? "..." : "Remove"}
-                          </button>
-                        )}
+                        <button
+                          onClick={() => toggleActive(c.id)}
+                          disabled={deleting === c.id}
+                          style={{
+                            padding: "5px 12px", borderRadius: 6, fontSize: 12, cursor: "pointer", fontFamily: "var(--font-sans)",
+                            border: c.is_active ? "1px solid #fee2e2" : "1px solid #dcfce7",
+                            background: "#fff",
+                            color: c.is_active ? "#ef4444" : "#15803d",
+                          }}>
+                          {deleting === c.id ? "..." : c.is_active ? "Deactivate" : "Activate"}
+                        </button>
                       </div>
                     </td>
                   </tr>

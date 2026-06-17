@@ -5,7 +5,6 @@ import sys
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from mongo import db
-from notifications.whatsapp import send_whatsapp_flag_alert, notify_designer_visual_queue
 
 try:
     from langchain_openai import ChatOpenAI
@@ -221,10 +220,5 @@ def run_prescore_batch():
 
         print(f"Scored item {item['_id']} -> {new_status} (Score: {result.get('score')})")
 
-        if not result["passed"]:
-            send_whatsapp_flag_alert(item, result.get("flag_reason", "Failed prescore"))
-
-        # Notify designer immediately when Blue Arrow content enters their queue
         if new_status == "designer_pending":
-            notify_designer_visual_queue(item)
-            print(f"  Designer notified for Blue Arrow item {item['_id']}")
+            print(f"  Blue Arrow item {item['_id']} queued for designer review.")

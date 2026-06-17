@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -7,7 +7,7 @@ type NavLink = {
   href: string;
   label: string;
   roles: string[] | null;
-  dropdown?: { href: string; label: string; icon: string }[];
+  dropdown?: { href: string; label: string }[];
 };
 
 const ALL_LINKS: NavLink[] = [
@@ -24,12 +24,12 @@ const ALL_LINKS: NavLink[] = [
     label: "Competitor Intel",
     roles: ["admin", "dm_leader"],
     dropdown: [
-      { href: "/competitor-intel", label: "Overview", icon: "⚙️" },
-      { href: "/competitor-intel/generated", label: "Review Queue", icon: "✍️" },
-      { href: "/competitor-intel/calendar", label: "Calendar", icon: "📅" },
-      { href: "/competitor-intel/analytics", label: "CI Analytics", icon: "📊" },
-      { href: "/competitor-intel/top-posts", label: "Top Posts", icon: "🏆" },
-      { href: "/competitor-intel/competitors", label: "Competitors", icon: "👥" },
+      { href: "/competitor-intel", label: "Overview" },
+      { href: "/competitor-intel/generated", label: "Review Queue" },
+      { href: "/competitor-intel/calendar", label: "Calendar" },
+      { href: "/competitor-intel/analytics", label: "CI Analytics" },
+      { href: "/competitor-intel/top-posts", label: "Top Posts" },
+      { href: "/competitor-intel/competitors", label: "Competitors" },
     ],
   },
   { href: "/settings", label: "Settings", roles: ["admin", "dm_leader"] },
@@ -43,8 +43,10 @@ export default function NavBar() {
   const [username, setUsername] = useState<string>("admin");
   const [userDropOpen, setUserDropOpen] = useState(false);
   const [ciDropOpen, setCiDropOpen] = useState(false);
+  const [ciDropPos, setCiDropPos] = useState({ top: 68, left: 0 });
   const userDropRef = useRef<HTMLDivElement>(null);
   const ciDropRef = useRef<HTMLDivElement>(null);
+  const ciButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     const r = localStorage.getItem("user_role");
@@ -61,11 +63,22 @@ export default function NavBar() {
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
       if (userDropRef.current && !userDropRef.current.contains(e.target as Node)) setUserDropOpen(false);
-      if (ciDropRef.current && !ciDropRef.current.contains(e.target as Node)) setCiDropOpen(false);
+      if (
+        ciDropRef.current && !ciDropRef.current.contains(e.target as Node) &&
+        ciButtonRef.current && !ciButtonRef.current.contains(e.target as Node)
+      ) setCiDropOpen(false);
     };
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
+
+  const handleCiToggle = () => {
+    if (!ciDropOpen && ciButtonRef.current) {
+      const rect = ciButtonRef.current.getBoundingClientRect();
+      setCiDropPos({ top: rect.bottom + 8, left: rect.left + rect.width / 2 });
+    }
+    setCiDropOpen(o => !o);
+  };
 
   const handleLogout = async () => {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -92,7 +105,7 @@ export default function NavBar() {
         .nb-drop-item:hover { background:var(--surface-soft); }
         .nb-drop-item.active { background:#fdf6f3; color:var(--primary); }
         @keyframes nb-fade { from{opacity:0;transform:translateX(-50%) translateY(-6px)} to{opacity:1;transform:translateX(-50%) translateY(0)} }
-        .nb-drop { animation: nb-fade 140ms ease; }
+        .nb-drop { animation: nb-fade 140ms ease; transform-origin: top center; }
         @media (max-width:768px) {
           .nb { padding:0 16px!important; }
           .nb-agents { display:none!important; }
@@ -110,46 +123,25 @@ export default function NavBar() {
           <img src="/Harshwal.png" alt="Harshwal" style={{ height: "36px", objectFit: "contain" }} />
         </a>
 
-        {/* Nav — scrollable center */}
+        {/* Nav - scrollable center */}
         <nav className="nb-nav" style={{ flex: 1, minWidth: 0, padding: "0 4px" }}>
           {links.map(link => {
             if (link.dropdown) {
               const isCiActive = pathname.startsWith(link.href);
               return (
-                <div key={link.href} ref={ciDropRef} style={{ position: "relative", display: "inline-block" }}>
-                  <button
-                    onClick={() => setCiDropOpen(o => !o)}
-                    className={`nb-link${isCiActive ? " active" : ""}`}
-                    style={{ background: ciDropOpen || isCiActive ? "var(--surface-soft)" : "transparent", border: "none", cursor: "pointer", fontFamily: "var(--font-sans)" }}
-                  >
-                    {link.label}
-                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
-                      style={{ transition: "transform 150ms", transform: ciDropOpen ? "rotate(180deg)" : "rotate(0deg)", flexShrink: 0 }}>
-                      <polyline points="6 9 12 15 18 9" />
-                    </svg>
-                  </button>
-
-                  {ciDropOpen && (
-                    <div className="nb-drop">
-                      <div style={{ padding: "6px 12px 8px", borderBottom: "1px solid var(--hairline)", marginBottom: 4 }}>
-                        <div style={{ fontSize: 11, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                          Competitor Intelligence
-                        </div>
-                      </div>
-                      {link.dropdown!.map(sub => (
-                        <a
-                          key={sub.href}
-                          href={sub.href}
-                          className={`nb-drop-item${pathname === sub.href ? " active" : ""}`}
-                          onClick={() => setCiDropOpen(false)}
-                        >
-                          <span style={{ fontSize: 16, lineHeight: 1, flexShrink: 0 }}>{sub.icon}</span>
-                          {sub.label}
-                        </a>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                <button
+                  key={link.href}
+                  ref={ciButtonRef}
+                  onClick={handleCiToggle}
+                  className={`nb-link${isCiActive ? " active" : ""}`}
+                  style={{ background: ciDropOpen || isCiActive ? "var(--surface-soft)" : "transparent", border: "none", cursor: "pointer", fontFamily: "var(--font-sans)" }}
+                >
+                  {link.label}
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+                    style={{ transition: "transform 150ms", transform: ciDropOpen ? "rotate(180deg)" : "rotate(0deg)", flexShrink: 0 }}>
+                    <polyline points="6 9 12 15 18 9" />
+                  </svg>
+                </button>
               );
             }
 
@@ -161,6 +153,35 @@ export default function NavBar() {
             );
           })}
         </nav>
+
+        {/* CI dropdown rendered outside the overflow nav so it isn't clipped */}
+        {ciDropOpen && (() => {
+          const ciLink = links.find(l => l.dropdown);
+          if (!ciLink) return null;
+          return (
+            <div
+              ref={ciDropRef}
+              className="nb-drop"
+              style={{ position: "fixed", top: ciDropPos.top, left: ciDropPos.left, transform: "translateX(-50%)" }}
+            >
+              <div style={{ padding: "6px 12px 8px", borderBottom: "1px solid var(--hairline)", marginBottom: 4 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: "0.5px" }}>
+                  Competitor Intelligence
+                </div>
+              </div>
+              {ciLink.dropdown!.map(sub => (
+                <a
+                  key={sub.href}
+                  href={sub.href}
+                  className={`nb-drop-item${pathname === sub.href ? " active" : ""}`}
+                  onClick={() => setCiDropOpen(false)}
+                >
+                  {sub.label}
+                </a>
+              ))}
+            </div>
+          );
+        })()}
 
         {/* Right: agents + avatar */}
         <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
@@ -236,7 +257,7 @@ export default function NavBar() {
   );
 }
 
-// ── Agent health indicator — compact dots only ─────────────────────────────────
+// â"€â"€ Agent health indicator â€" compact dots only â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
 function AgentHealthBar() {
   const [health, setHealth] = useState<Record<string, { status: string; last_run: string }>>({});
   const [alertDismissed, setAlertDismissed] = useState(false);
@@ -244,7 +265,7 @@ function AgentHealthBar() {
   useEffect(() => {
     const fetchHealth = async () => {
       try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001";
         const res = await fetch(`${apiUrl}/api/agents/health`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
@@ -283,10 +304,10 @@ function AgentHealthBar() {
           justifyContent: "space-between", fontSize: 14, fontWeight: 500,
           backdropFilter: "blur(4px)",
         }}>
-          <span>Agent error: {errorAgents.map(a => a.label).join(", ")} — check pipeline logs.</span>
+          <span>Agent error: {errorAgents.map(a => a.label).join(", ")} â€" check pipeline logs.</span>
           <button onClick={() => setAlertDismissed(true)}
             style={{ background: "none", border: "none", color: "#fff", fontSize: 20, cursor: "pointer", lineHeight: 1 }}>
-            ×
+            Ã—
           </button>
         </div>
       )}
@@ -323,7 +344,7 @@ function AgentHealthBar() {
               <div
                 key={key}
                 className={status === "error" ? "dot-err" : ""}
-                title={`${label}: ${status} — last run: ${lastRun}`}
+                title={`${label}: ${status} â€" last run: ${lastRun}`}
                 style={{ width: 7, height: 7, borderRadius: "50%", background: color, flexShrink: 0 }}
               />
             );

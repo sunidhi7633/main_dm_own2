@@ -23,7 +23,6 @@ def check_permission(user: CurrentUser, required_permission: str):
 class RecipientRequest(BaseModel):
     name: str
     email: str
-    whatsapp: str
     role: str # CEO | Partner | Advisor
 
 @router.get("/api/settings/recipients")
@@ -45,7 +44,6 @@ async def add_recipient(req: RecipientRequest, current_user: CurrentUser = Depen
     doc = {
         "name": req.name,
         "email": req.email,
-        "whatsapp": req.whatsapp,
         "role": req.role,
         "active": True,
         "added_by": current_user.id,

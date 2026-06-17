@@ -3,6 +3,8 @@
 import React, { useState } from 'react';
 import { useToast } from "../components/ToastProvider";
 
+const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001";
+
 type Post = {
   id: number;
   title: string;
@@ -45,10 +47,31 @@ export default function SMOWorkflowPage() {
   const [generatingQuick, setGeneratingQuick] = useState(false);
   const [editingPostId, setEditingPostId] = useState<number | null>(null);
   const [editCaption, setEditCaption] = useState<string>("");
+  const [runningPipeline, setRunningPipeline] = useState(false);
+  const [runMsg, setRunMsg] = useState("");
+
+  const handleRunSMO = async () => {
+    setRunningPipeline(true);
+    setRunMsg("");
+    try {
+      const token = localStorage.getItem("access_token");
+      const res = await fetch(`${API}/api/smo/run`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (res.ok) {
+        setRunMsg("SMO pipeline started — posts will appear in 2-3 minutes.");
+        setTimeout(() => fetchPosts(), 180000);
+      } else {
+        setRunMsg("Failed to start pipeline.");
+      }
+    } catch { setRunMsg("Network error."); }
+    finally { setRunningPipeline(false); }
+  };
 
   const fetchPosts = async () => {
     try {
-      const res = await fetch("http://localhost:8000/api/smo/posts");
+      const res = await fetch("${API}/api/smo/posts");
       if (res.ok) {
         setPosts(await res.json());
       }
@@ -65,7 +88,7 @@ export default function SMOWorkflowPage() {
 
   const handleApprove = async (id: number) => {
     try {
-      await fetch(`http://localhost:8000/api/smo/approve/${id}`, { method: 'PATCH' });
+      await fetch(`${API}/api/smo/approve/${id}`, { method: 'PATCH' });
       fetchPosts();
     } catch (err) {
       console.error(err);
@@ -74,7 +97,7 @@ export default function SMOWorkflowPage() {
 
   const handleReject = async (id: number) => {
     try {
-      await fetch(`http://localhost:8000/api/smo/reject/${id}`, { method: 'PATCH' });
+      await fetch(`${API}/api/smo/reject/${id}`, { method: 'PATCH' });
       fetchPosts();
     } catch (err) {
       console.error(err);
@@ -93,7 +116,7 @@ export default function SMOWorkflowPage() {
 
   const handleSaveEdit = async (id: number) => {
     try {
-      await fetch(`http://localhost:8000/api/smo/edit/${id}`, {
+      await fetch(`${API}/api/smo/edit/${id}`, {
         method: 'PATCH',
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ caption: editCaption })
@@ -109,7 +132,7 @@ export default function SMOWorkflowPage() {
     if (!quickTopic.trim()) return;
     setGeneratingQuick(true);
     try {
-      const aiRes = await fetch("http://localhost:8000/api/brand-voice/generate", {
+      const aiRes = await fetch("${API}/api/brand-voice/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -122,7 +145,7 @@ export default function SMOWorkflowPage() {
       if (!aiRes.ok) throw new Error("AI generation failed");
       const { caption } = await aiRes.json();
 
-      await fetch("http://localhost:8000/api/smo/posts", {
+      await fetch("${API}/api/smo/posts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -422,6 +445,14 @@ export default function SMOWorkflowPage() {
             
             <div style={{ marginLeft:'auto', display:'flex', gap:8, alignItems:'center', flexShrink: 0 }}>
               <span style={{ fontSize:11, fontWeight:600, padding:'4px 9px', borderRadius:99, background:'#f5ede8', color:'#cc785c', letterSpacing:'0.3px', whiteSpace: 'nowrap' }}>SMO Agent</span>
+              <button
+                onClick={handleRunSMO}
+                disabled={runningPipeline}
+                style={{ fontSize:12, fontWeight:600, padding:'6px 14px', borderRadius:8, border:'none', background: runningPipeline ? '#d1ccc6' : '#cc785c', color:'#fff', cursor: runningPipeline ? 'not-allowed' : 'pointer', whiteSpace:'nowrap' }}
+              >
+                {runningPipeline ? "Running..." : "Run Now"}
+              </button>
+              {runMsg && <span style={{ fontSize:11, color:'#cc785c', maxWidth:200 }}>{runMsg}</span>}
             </div>
           </div>
 

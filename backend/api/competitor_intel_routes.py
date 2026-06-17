@@ -186,6 +186,18 @@ def delete_competitor(cid: int, db: Session = Depends(get_db),
     return {"status": "deactivated"}
 
 
+@router.post("/api/ci/competitors/{cid}/toggle")
+def toggle_competitor(cid: int, db: Session = Depends(get_db),
+                      current_user: CurrentUser = Depends(get_current_user)):
+    check_permission(current_user, "smo:trigger")
+    c = db.query(models.CICompetitor).filter(models.CICompetitor.id == cid).first()
+    if not c:
+        raise HTTPException(404, "Competitor not found")
+    c.is_active = 0 if c.is_active else 1
+    db.commit()
+    return {"status": "active" if c.is_active else "inactive", "is_active": c.is_active}
+
+
 # ── Pipeline ──────────────────────────────────────────────────────────────────
 
 @router.post("/api/ci/run")
@@ -194,10 +206,21 @@ def trigger_run(body: RunRequest = Body(RunRequest()), db: Session = Depends(get
     check_permission(current_user, "smo:trigger")
     run = models.CIPipelineRun(triggered_by=current_user.username, status="pending", step="queued")
     db.add(run); db.commit(); db.refresh(run)
+    run_id = run.id
+    brands = body.brands
 
-    import celery_config
-    celery_config.run_ci_pipeline.apply_async(kwargs={"run_id": run.id, "brands": body.brands})
-    return {"run_id": run.id, "status": "queued"}
+    try:
+        import celery_config
+        celery_config.run_ci_pipeline.apply_async(kwargs={"run_id": run_id, "brands": brands})
+    except Exception:
+        # Celery unavailable — run in background thread
+        import threading
+        def _run():
+            import celery_config as cc
+            cc.run_ci_pipeline(run_id=run_id, brands=brands)
+        threading.Thread(target=_run, daemon=True).start()
+
+    return {"run_id": run_id, "status": "queued"}
 
 
 @router.get("/api/ci/runs")

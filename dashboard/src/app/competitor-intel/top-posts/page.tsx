@@ -1,7 +1,7 @@
-"use client";
+﻿"use client";
 import { useEffect, useState } from "react";
 
-const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001";
 
 type Post = {
   id: number; rank: number; competitor_name: string; platform: string;
@@ -78,7 +78,7 @@ export default function TopPostsPage() {
           <p style={{ fontSize: 13, color: "var(--muted)", margin: "4px 0 0" }}>Highest-performing competitor content from the latest pipeline run</p>
         </div>
         <a href="/competitor-intel/generated" className="tp-review-btn" style={{ padding: "9px 20px", borderRadius: 8, border: "none", background: "var(--primary)", color: "#fff", fontSize: 13, fontWeight: 600, textDecoration: "none" }}>
-          Review Generated Content →
+          Review Generated Content â†’
         </a>
       </div>
 
@@ -128,7 +128,7 @@ export default function TopPostsPage() {
         <div style={{ textAlign: "center", padding: 80, color: "var(--muted)" }}>Loading top posts...</div>
       ) : filtered.length === 0 ? (
         <div style={{ textAlign: "center", padding: 80, color: "var(--muted)" }}>
-          <div style={{ fontSize: 40, marginBottom: 16 }}>🏆</div>
+          <div style={{ fontSize: 40, marginBottom: 16 }}></div>
           <div style={{ fontSize: 16, fontWeight: 600, color: "var(--ink)", marginBottom: 8 }}>No posts yet</div>
           <div style={{ fontSize: 14 }}>Run a pipeline first to see top competitor posts here.</div>
           <a href="/competitor-intel" style={{ display: "inline-block", marginTop: 16, padding: "10px 24px", borderRadius: 8, background: "var(--primary)", color: "#fff", textDecoration: "none", fontSize: 14, fontWeight: 600 }}>Go to Dashboard</a>
@@ -176,15 +176,15 @@ export default function TopPostsPage() {
                 {isOpen && (
                   <div style={{ padding: "0 20px 16px", borderTop: "1px solid var(--hairline)", paddingTop: 12 }}>
                     <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}>
-                      <MetricPill label="👍 Likes" val={p.likes} />
-                      <MetricPill label="💬 Comments" val={p.comments} />
-                      <MetricPill label="🔁 Shares" val={p.shares} />
-                      <MetricPill label="🔃 Reposts" val={p.reposts} />
-                      <MetricPill label="👁️ Views" val={p.views} />
+                      <MetricPill label=" Likes" val={p.likes} />
+                      <MetricPill label=" Comments" val={p.comments} />
+                      <MetricPill label=" Shares" val={p.shares} />
+                      <MetricPill label=" Reposts" val={p.reposts} />
+                      <MetricPill label=" Views" val={p.views} />
                     </div>
                     {p.post_url && (
                       <a href={p.post_url} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: "var(--primary)", textDecoration: "none" }}>
-                        View original post →
+                        View original post â†’
                       </a>
                     )}
                   </div>

@@ -11,7 +11,6 @@ export default function SettingsPage() {
   // New recipient form
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
-  const [whatsapp, setWhatsapp] = useState("");
   const [role, setRole] = useState("CEO");
   const [saving, setSaving] = useState(false);
 
@@ -43,11 +42,11 @@ export default function SettingsPage() {
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/settings/recipients`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, whatsapp, role }),
+        body: JSON.stringify({ name, email, role }),
       });
       if (res.ok) {
         toast.success(`${name} added to recipient list.`);
-        setName(""); setEmail(""); setWhatsapp(""); setRole("CEO");
+        setName(""); setEmail(""); setRole("CEO");
         fetchRecipients();
       } else {
         const err = await res.json();
@@ -95,7 +94,7 @@ export default function SettingsPage() {
           <div>
             <h2 style={{ fontSize: "17px", fontWeight: 600, color: "var(--ink)", margin: 0, marginBottom: "4px" }}>Report Recipients</h2>
             <p style={{ fontSize: "13px", color: "var(--muted)", margin: 0 }}>
-              These people receive generated reports via email and WhatsApp.
+              These people receive generated reports via email.
             </p>
           </div>
           <span style={{ fontSize: "13px", color: "var(--muted)" }}>
@@ -141,7 +140,6 @@ export default function SettingsPage() {
                   </div>
                   <div style={{ fontSize: "13px", color: "var(--muted)", display: "flex", gap: "16px", flexWrap: "wrap" }}>
                     <span>✉ {r.email}</span>
-                    {r.whatsapp && <span>📱 {r.whatsapp}</span>}
                   </div>
                 </div>
                 {canEdit && (
@@ -183,10 +181,6 @@ export default function SettingsPage() {
               <div style={{ flex: "1 1 200px" }}>
                 <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: "var(--muted)", marginBottom: "6px", textTransform: "uppercase", letterSpacing: "0.5px" }}>Email Address</label>
                 <input required className="input-field" type="email" placeholder="sanwar@harshwal.com" value={email} onChange={e => setEmail(e.target.value)} />
-              </div>
-              <div style={{ flex: "1 1 200px" }}>
-                <label style={{ display: "block", fontSize: "12px", fontWeight: 600, color: "var(--muted)", marginBottom: "6px", textTransform: "uppercase", letterSpacing: "0.5px" }}>WhatsApp Number</label>
-                <input className="input-field" type="text" placeholder="+919876543210" value={whatsapp} onChange={e => setWhatsapp(e.target.value)} />
               </div>
             </div>
             <div style={{ display: "flex", justifyContent: "flex-end" }}>
